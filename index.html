@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carnelian | Communication Consulting Prototype</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- AOS for Animations -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <!-- Leaflet JS for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- vis-network for Graph -->
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        :root {
+            --carnelian-red: #B03060;
+            --carnelian-dark: #2D3436;
+        }
+        .bg-carnelian { background-color: var(--carnelian-red); }
+        .text-carnelian { color: var(--carnelian-red); }
+        .border-carnelian { border-color: var(--carnelian-red); }
+        
+        #map { height: 600px; width: 100%; border-radius: 1rem; }
+        #network { height: 600px; width: 100%; border: 1px solid lightgray; border-radius: 1rem; background-color: #f8fafc; }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -9px;
+            top: 5px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--carnelian-red);
+        }
+        
+        .custom-popup .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+            padding: 0;
+            overflow: hidden;
+        }
+        .custom-popup .leaflet-popup-content {
+            margin: 0;
+            width: 250px !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans selection:bg-red-200">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 bg-white shadow-sm py-4 px-8 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+            <div class="w-10 h-10 bg-carnelian rounded-lg flex items-center justify-center text-white font-bold text-xl">C</div>
+            <span class="text-2xl font-bold tracking-tight text-carnelian">Carnelian</span>
+        </div>
+        <div class="hidden md:flex gap-8 font-medium">
+            <a href="#about" class="hover:text-carnelian transition-colors">About</a>
+            <a href="#map-section" class="hover:text-carnelian transition-colors">Hub Map</a>
+            <a href="#events" class="hover:text-carnelian transition-colors">Events Graph</a>
+            <a href="#services" class="hover:text-carnelian transition-colors">Services</a>
+        </div>
+        <button class="bg-carnelian text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 transition-opacity">Contact Us</button>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="relative bg-carnelian text-white py-32 px-8 overflow-hidden">
+        <div class="max-w-6xl mx-auto relative z-10" data-aos="fade-up">
+            <h1 class="text-5xl md:text-7xl font-extrabold mb-6 leading-tight">Empowering <br><span class="underline decoration-red-300">Communication</span> Excellence</h1>
+            <p class="text-xl md:text-2xl text-red-50 max-w-2xl mb-10">
+                Since 1991, we've been the catalyst for transformation in Pakistan's corporate landscape. Full-service Communication Consulting partner.
+            </p>
+            <div class="flex gap-4">
+                <a href="#map-section" class="bg-white text-carnelian px-8 py-3 rounded-lg font-bold hover:bg-gray-100 transition-colors">Explore Hubs</a>
+                <a href="#events" class="border-2 border-white px-8 py-3 rounded-lg font-bold hover:bg-white hover:text-carnelian transition-all">Interactive Events</a>
+            </div>
+        </div>
+        <!-- Decorative Shapes -->
+        <div class="absolute -top-24 -right-24 w-96 h-96 bg-red-400 rounded-full opacity-20 blur-3xl"></div>
+        <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-red-800 rounded-full opacity-30 blur-3xl"></div>
+    </header>
+
+    <!-- About Section & Timeline -->
+    <section id="about" class="py-24 px-8 max-w-6xl mx-auto">
+        <div class="grid md:grid-cols-2 gap-16 items-center">
+            <div data-aos="fade-right">
+                <h2 class="text-4xl font-bold mb-6 text-carnelian">Our Journey Since 1991</h2>
+                <p class="text-lg text-gray-600 mb-8 leading-relaxed">
+                    Carnelian’s team members have been active across the length and breadth of Pakistan, adding value to organizations small and large, local and global.
+                </p>
+                
+                <div class="space-y-8 border-l-2 border-gray-200 ml-3 pl-8 relative">
+                    <div class="timeline-item relative" data-aos="fade-up" data-aos-delay="100">
+                        <span class="block font-bold text-carnelian text-lg">1991</span>
+                        <p class="text-gray-600">Established as a pioneering communication consulting firm in Pakistan.</p>
+                    </div>
+                    <div class="timeline-item relative" data-aos="fade-up" data-aos-delay="200">
+                        <span class="block font-bold text-carnelian text-lg">2005</span>
+                        <p class="text-gray-600">Expanded to major regional hubs: Islamabad, Lahore, and Karachi.</p>
+                    </div>
+                    <div class="timeline-item relative" data-aos="fade-up" data-aos-delay="300">
+                        <span class="block font-bold text-carnelian text-lg">Today</span>
+                        <p class="text-gray-600">Full-service partners in Training, Coaching, Branding, and Event Management.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-200 rounded-2xl h-[400px] overflow-hidden relative group" data-aos="fade-left">
+                <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-all flex items-center justify-center">
+                    <span class="text-white font-bold text-2xl border-2 border-white px-6 py-2">Consulting Excellence</span>
+                </div>
+                <img src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80&w=2070" class="w-full h-full object-cover" alt="Consulting">
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section id="services" class="py-24 bg-white px-8">
+        <div class="max-w-6xl mx-auto text-center mb-16">
+            <h2 class="text-4xl font-bold text-carnelian mb-4">Our Expertise</h2>
+            <p class="text-gray-600 max-w-2xl mx-auto">Providing a diverse range of services to enable effective communication with stakeholders.</p>
+        </div>
+        <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Service Cards -->
+            <div class="p-8 rounded-2xl bg-gray-50 hover:bg-red-50 hover:-translate-y-2 transition-all border border-transparent hover:border-red-100" data-aos="fade-up">
+                <div class="w-12 h-12 bg-carnelian rounded-lg mb-6 flex items-center justify-center text-white text-2xl">🎓</div>
+                <h3 class="text-xl font-bold mb-4">Training & Coaching</h3>
+                <p class="text-gray-600">Enabling teams with motivated leadership and skill development programs.</p>
+            </div>
+            <div class="p-8 rounded-2xl bg-gray-50 hover:bg-red-50 hover:-translate-y-2 transition-all border border-transparent hover:border-red-100" data-aos="fade-up" data-aos-delay="100">
+                <div class="w-12 h-12 bg-carnelian rounded-lg mb-6 flex items-center justify-center text-white text-2xl">🏷️</div>
+                <h3 class="text-xl font-bold mb-4">Branding</h3>
+                <p class="text-gray-600">Strategically positioning your identity for aligned partners and engaged customers.</p>
+            </div>
+            <div class="p-8 rounded-2xl bg-gray-50 hover:bg-red-50 hover:-translate-y-2 transition-all border border-transparent hover:border-red-100" data-aos="fade-up" data-aos-delay="200">
+                <div class="w-12 h-12 bg-carnelian rounded-lg mb-6 flex items-center justify-center text-white text-2xl">📅</div>
+                <h3 class="text-xl font-bold mb-4">Event Management</h3>
+                <p class="text-gray-600">Creating memorable experiences that resonate with your diverse stakeholders.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Map Section -->
+    <section id="map-section" class="py-24 px-8 bg-gray-100">
+        <div class="max-w-6xl mx-auto mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div>
+                <h2 class="text-4xl font-bold text-carnelian mb-4">Regional Office Hubs</h2>
+                <p class="text-gray-600">Our physical presence across Pakistan. Hover or click on a hub to see more details.</p>
+            </div>
+            <div class="flex gap-4">
+                <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm text-sm">
+                    <span class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+                    <span>Live Hubs</span>
+                </div>
+            </div>
+        </div>
+        <div class="max-w-6xl mx-auto shadow-2xl relative">
+            <div id="map"></div>
+            <!-- Legend / Stats -->
+            <div class="absolute bottom-8 left-8 z-[1000] bg-white/90 backdrop-blur p-4 rounded-xl shadow-lg border border-white/20 hidden md:block">
+                <h4 class="font-bold text-carnelian mb-2">Total Outreach</h4>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <span class="block text-2xl font-bold">500+</span>
+                        <span class="text-xs text-gray-500 uppercase font-semibold">Clients Served</span>
+                    </div>
+                    <div>
+                        <span class="block text-2xl font-bold">12k+</span>
+                        <span class="text-xs text-gray-500 uppercase font-semibold">Trained Persons</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Events Graph Section -->
+    <section id="events" class="py-24 px-8 bg-white">
+        <div class="max-w-6xl mx-auto mb-12 text-center">
+            <h2 class="text-4xl font-bold text-carnelian mb-4">Interactive Events Explorer</h2>
+            <p class="text-gray-600 max-w-2xl mx-auto">Explore our diverse portfolio of events and their interconnections. Click a node to expand details.</p>
+        </div>
+        <div class="max-w-6xl mx-auto">
+            <div class="grid md:grid-cols-4 gap-8">
+                <div class="md:col-span-3">
+                    <div id="network"></div>
+                </div>
+                <div class="bg-gray-50 rounded-2xl p-6 border border-gray-200" id="node-details">
+                    <h3 class="text-xl font-bold text-carnelian mb-4">Event Details</h3>
+                    <div id="detail-content">
+                        <p class="text-gray-400 italic">Select a node in the graph to view details here.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-carnelian text-white py-12 px-8">
+        <div class="max-w-6xl mx-auto grid md:grid-cols-4 gap-12">
+            <div class="md:col-span-2">
+                <div class="flex items-center gap-2 mb-6">
+                    <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-carnelian font-bold text-xl">C</div>
+                    <span class="text-2xl font-bold tracking-tight">Carnelian</span>
+                </div>
+                <p class="text-red-100 max-w-sm">
+                    Full-service Communication Consulting partner since 1991. Enabling clients to effectively communicate with diverse stakeholders.
+                </p>
+            </div>
+            <div>
+                <h4 class="font-bold mb-6">Links</h4>
+                <ul class="space-y-4 text-red-100">
+                    <li><a href="#" class="hover:text-white transition-colors">Home</a></li>
+                    <li><a href="#about" class="hover:text-white transition-colors">About Us</a></li>
+                    <li><a href="#map-section" class="hover:text-white transition-colors">Our Hubs</a></li>
+                    <li><a href="#services" class="hover:text-white transition-colors">Services</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-bold mb-6">Contact</h4>
+                <p class="text-red-100 mb-2">info@carnelian.com.pk</p>
+                <p class="text-red-100">+92 (21) 111-222-333</p>
+                <div class="flex gap-4 mt-6">
+                    <a href="#" class="w-10 h-10 bg-red-800 rounded-full flex items-center justify-center hover:bg-red-700 transition-colors">in</a>
+                    <a href="#" class="w-10 h-10 bg-red-800 rounded-full flex items-center justify-center hover:bg-red-700 transition-colors">f</a>
+                    <a href="#" class="w-10 h-10 bg-red-800 rounded-full flex items-center justify-center hover:bg-red-700 transition-colors">t</a>
+                </div>
+            </div>
+        </div>
+        <div class="max-w-6xl mx-auto border-t border-red-800 mt-12 pt-8 text-center text-red-200 text-sm">
+            © 2026 Carnelian. All rights reserved.
+        </div>
+    </footer>
+
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true
+        });
+
+        // Map Implementation
+        var map = L.map('map', {
+            scrollWheelZoom: false
+        }).setView([30.3753, 69.3451], 5); // Centered on Pakistan
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '©OpenStreetMap, ©CartoDB'
+        }).addTo(map);
+
+        const hubs = [
+            {
+                name: "Karachi Hub",
+                lat: 24.8607,
+                lng: 67.0011,
+                lead: "Ahsan Iqbal",
+                clients: 150,
+                img: "https://i.pravatar.cc/150?u=ahsan"
+            },
+            {
+                name: "Lahore Hub",
+                lat: 31.5204,
+                lng: 74.3587,
+                lead: "Sarah Ahmed",
+                clients: 120,
+                img: "https://i.pravatar.cc/150?u=sarah"
+            },
+            {
+                name: "Islamabad Hub",
+                lat: 33.6844,
+                lng: 73.0479,
+                lead: "Zohaib Khan",
+                clients: 90,
+                img: "https://i.pravatar.cc/150?u=zohaib"
+            }
+        ];
+
+        hubs.forEach(hub => {
+            const popupContent = `
+                <div class="custom-popup">
+                    <div class="bg-carnelian p-4 text-white">
+                        <h3 class="font-bold text-lg">${hub.name}</h3>
+                    </div>
+                    <div class="p-4 flex gap-4 items-center">
+                        <img src="${hub.img}" class="w-12 h-12 rounded-full border-2 border-carnelian" alt="${hub.lead}">
+                        <div>
+                            <p class="font-bold text-gray-800 leading-tight">${hub.lead}</p>
+                            <p class="text-xs text-gray-500">Regional Lead</p>
+                        </div>
+                    </div>
+                    <div class="px-4 pb-4 border-t pt-2 mt-2 bg-gray-50">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-semibold text-gray-500 uppercase">Clients Served</span>
+                            <span class="font-bold text-carnelian">${hub.clients}+</span>
+                        </div>
+                    </div>
+                    <div class="p-4 pt-0">
+                        <button class="w-full bg-carnelian/10 text-carnelian font-bold py-2 rounded-lg text-sm hover:bg-carnelian hover:text-white transition-all">View LinkedIn Profile</button>
+                    </div>
+                </div>
+            `;
+            
+            L.marker([hub.lat, hub.lng]).addTo(map)
+                .bindPopup(popupContent);
+        });
+
+        // Network Graph Implementation
+        var nodes = new vis.DataSet([
+            { id: 1, label: 'Annual Strategy Summit', group: 'corporate', title: 'Our flagship event for corporate leaders.' },
+            { id: 2, label: 'Leadership Coaching', group: 'training', title: 'Intensive 1-on-1 sessions.' },
+            { id: 3, label: 'Brand Identity Workshop', group: 'branding', title: 'Creative sessions for startups.' },
+            { id: 4, label: 'Team Bonding Retreat', group: 'training', title: 'Outdoor activities for motivation.' },
+            { id: 5, label: 'Customer Experience Expo', group: 'corporate', title: 'Showcasing modern CX strategies.' },
+            { id: 6, label: 'Digital Branding Seminar', group: 'branding', title: 'Exploring the digital landscape.' }
+        ]);
+
+        var edges = new vis.DataSet([
+            { from: 1, to: 2, label: 'Next Step' },
+            { from: 1, to: 5, label: 'Related' },
+            { from: 2, to: 4, label: 'Follow-up' },
+            { from: 3, to: 6, label: 'Evolution' },
+            { from: 5, to: 3, label: 'Integrated' }
+        ]);
+
+        var container = document.getElementById('network');
+        var data = {
+            nodes: nodes,
+            edges: edges
+        };
+        var options = {
+            nodes: {
+                shape: 'dot',
+                size: 25,
+                font: { size: 14, color: '#2D3436' },
+                borderWidth: 2,
+                shadow: true,
+                color: {
+                    background: '#ffffff',
+                    border: '#B03060',
+                    highlight: { background: '#B03060', border: '#8B0000' }
+                }
+            },
+            edges: {
+                width: 2,
+                color: { color: '#B03060', opacity: 0.3 },
+                font: { align: 'horizontal', size: 10 },
+                arrows: { to: { enabled: true, scaleFactor: 0.5 } }
+            },
+            groups: {
+                corporate: { color: { background: '#B03060', border: '#8B0000' }, font: { color: '#ffffff' } },
+                training: { color: { background: '#4A90E2', border: '#2A5C9A' }, font: { color: '#ffffff' } },
+                branding: { color: { background: '#F5A623', border: '#C58316' }, font: { color: '#ffffff' } }
+            },
+            interaction: { hover: true, tooltipDelay: 200 },
+            physics: { enabled: true, stabilization: true }
+        };
+        var network = new vis.Network(container, data, options);
+
+        const eventDetails = {
+            1: { title: "Annual Strategy Summit", date: "Nov 15, 2025", desc: "Our flagship event gathering 200+ CEOs and industry leaders to discuss the future of corporate communication in Pakistan.", tags: ["Strategy", "Leadership"] },
+            2: { title: "Leadership Coaching", date: "Monthly", desc: "Private sessions with our expert consultants focusing on behavioral leadership and emotional intelligence.", tags: ["Coaching", "HR"] },
+            3: { title: "Brand Identity Workshop", date: "Dec 05, 2025", desc: "A hands-on workshop to redefine organizational identity and align internal culture with external branding.", tags: ["Branding", "Creative"] },
+            4: { title: "Team Bonding Retreat", date: "Quarterly", desc: "Off-site activities designed to break silos and foster authentic communication between departments.", tags: ["Teamwork", "Motivation"] },
+            5: { title: "Customer Experience Expo", date: "Feb 10, 2026", desc: "Showcasing the latest tools and strategies for deepening customer engagement and loyalty.", tags: ["CX", "Customer Service"] },
+            6: { title: "Digital Branding Seminar", date: "Mar 22, 2026", desc: "How to maintain brand voice consistency across fragmented digital platforms.", tags: ["Digital", "Marketing"] }
+        };
+
+        network.on("click", function (params) {
+            if (params.nodes.length > 0) {
+                const nodeId = params.nodes[0];
+                const detail = eventDetails[nodeId];
+                const detailDiv = document.getElementById('detail-content');
+                
+                detailDiv.innerHTML = `
+                    <div class="animate-in fade-in duration-300">
+                        <span class="inline-block bg-carnelian/10 text-carnelian text-xs font-bold px-2 py-1 rounded mb-2">${detail.date}</span>
+                        <h4 class="text-xl font-bold mb-2">${detail.title}</h4>
+                        <p class="text-gray-600 text-sm mb-4">${detail.desc}</p>
+                        <div class="flex flex-wrap gap-2">
+                            ${detail.tags.map(tag => `<span class="bg-gray-200 px-2 py-1 rounded-full text-xs">#${tag}</span>`).join('')}
+                        </div>
+                        <button class="w-full mt-6 bg-carnelian text-white py-2 rounded-lg font-bold hover:opacity-90 transition-all">Register for Interest</button>
+                    </div>
+                `;
+            }
+        });
+
+    </script>
+</body>
+</html>

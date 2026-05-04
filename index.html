@@ -12,162 +12,217 @@
     <!-- Leaflet JS for Maps -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <!-- vis-network for Graph -->
-    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <!-- D3.js & GSAP for Conceptual Graph -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <style>
         :root {
-            --carnelian-red: #B03060;
-            --carnelian-dark: #2D3436;
+            --c-red-bright: #e21713;
+            --c-dark-navy: #35314e;
+            --c-cream: #fbe4e1;
+            --c-red-deep: #840305;
+            --c-orange: #ed7b0a;
+            --c-maroon: #702830;
+            --c-red-alt: #a50705;
+            --c-coral: #ce6e61;
         }
-        .bg-carnelian { background-color: var(--carnelian-red); }
-        .text-carnelian { color: var(--carnelian-red); }
-        .border-carnelian { border-color: var(--carnelian-red); }
         
-        #map { height: 600px; width: 100%; border-radius: 1rem; }
-        #network { height: 600px; width: 100%; border: 1px solid lightgray; border-radius: 1rem; background-color: #f8fafc; }
+        body { background-color: #fff; color: var(--c-dark-navy); }
+        .bg-carnelian { background-color: var(--c-red-bright); }
+        .text-carnelian { color: var(--c-red-bright); }
+        .border-carnelian { border-color: var(--c-red-bright); }
+        
+        #map { height: 600px; width: 100%; border-radius: 1.5rem; filter: grayscale(0.2) contrast(1.1); }
+        #network { height: 750px; width: 100%; border-radius: 2rem; background: #fff; overflow: hidden; cursor: grab; }
+        #network:active { cursor: grabbing; }
+        
+        .node-hub rect { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .node-hub:hover rect { filter: drop-shadow(0 15px 30px rgba(226, 23, 19, 0.2)); }
+        
+        .edge-label { pointer-events: none; user-select: none; }
         
         .timeline-item::before {
             content: '';
             position: absolute;
-            left: -9px;
+            left: -10px;
             top: 5px;
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
-            background: var(--carnelian-red);
+            background: var(--c-red-bright);
+            border: 4px solid var(--c-cream);
         }
         
         .custom-popup .leaflet-popup-content-wrapper {
-            border-radius: 12px;
+            border-radius: 20px;
             padding: 0;
             overflow: hidden;
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.1);
         }
         .custom-popup .leaflet-popup-content {
             margin: 0;
-            width: 250px !important;
+            width: 300px !important;
         }
+
+        .btn-primary {
+            background-color: var(--c-red-bright);
+            color: white;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-primary:hover {
+            background-color: var(--c-red-deep);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(226, 23, 19, 0.2);
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.05);
+        }
+
+        .node-event circle { transition: all 0.3s ease; }
+        .node-event:hover circle { r: 12; fill: var(--c-red-bright); }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-900 font-sans selection:bg-red-200">
+<body class="font-sans selection:bg-red-100">
 
     <!-- Navigation -->
-    <nav class="sticky top-0 z-50 bg-white shadow-sm py-4 px-8 flex justify-between items-center">
-        <div class="flex items-center gap-2">
-            <div class="w-10 h-10 bg-carnelian rounded-lg flex items-center justify-center text-white font-bold text-xl">C</div>
-            <span class="text-2xl font-bold tracking-tight text-carnelian">Carnelian</span>
+    <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 py-4 px-8 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="w-11 h-11 bg-carnelian rounded-xl flex items-center justify-center text-white shadow-lg">
+                <svg viewBox="0 0 24 24" class="w-7 h-7 fill-current"><path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 18l-8-4V8.5l8 4 8-4V16l-8 4z"/></svg>
+            </div>
+            <span class="text-2xl font-black tracking-tighter text-carnelian uppercase">Carnelian</span>
         </div>
-        <div class="hidden md:flex gap-8 font-medium">
-            <a href="#about" class="hover:text-carnelian transition-colors">About</a>
-            <a href="#map-section" class="hover:text-carnelian transition-colors">Hub Map</a>
-            <a href="#events" class="hover:text-carnelian transition-colors">Events Graph</a>
-            <a href="#services" class="hover:text-carnelian transition-colors">Services</a>
+        <div class="hidden md:flex gap-10 font-bold text-sm uppercase tracking-widest text-gray-500">
+            <a href="#about" class="hover:text-carnelian transition-colors">Vision</a>
+            <a href="#map-section" class="hover:text-carnelian transition-colors">Network</a>
+            <a href="#events" class="hover:text-carnelian transition-colors">Portfolio</a>
+            <a href="#services" class="hover:text-carnelian transition-colors">Expertise</a>
         </div>
-        <button class="bg-carnelian text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 transition-opacity">Contact Us</button>
+        <button class="btn-primary px-7 py-2.5 rounded-full font-bold text-sm uppercase tracking-wider">Get in Touch</button>
     </nav>
 
     <!-- Hero Section -->
-    <header class="relative bg-carnelian text-white py-32 px-8 overflow-hidden">
+    <header class="relative bg-white text-gray-900 py-32 px-8 overflow-hidden">
         <div class="max-w-6xl mx-auto relative z-10" data-aos="fade-up">
-            <h1 class="text-5xl md:text-7xl font-extrabold mb-6 leading-tight">Empowering <br><span class="underline decoration-red-300">Communication</span> Excellence</h1>
-            <p class="text-xl md:text-2xl text-red-50 max-w-2xl mb-10">
-                Since 1991, we've been the catalyst for transformation in Pakistan's corporate landscape. Full-service Communication Consulting partner.
+            <div class="inline-block px-4 py-1.5 mb-6 bg-red-50 rounded-full border border-red-100 text-carnelian text-xs font-black uppercase tracking-widest">Est. 1991</div>
+            <h1 class="text-6xl md:text-8xl font-black mb-8 leading-[0.9] tracking-tighter text-gray-900">
+                Crafting <span class="text-carnelian italic">Impactful</span><br>Connections.
+            </h1>
+            <p class="text-xl md:text-2xl text-gray-500 max-w-2xl mb-12 leading-relaxed">
+                Pakistan's premier Communication Consulting partner, transforming corporate landscapes through strategic training, branding, and engagement.
             </p>
-            <div class="flex gap-4">
-                <a href="#map-section" class="bg-white text-carnelian px-8 py-3 rounded-lg font-bold hover:bg-gray-100 transition-colors">Explore Hubs</a>
-                <a href="#events" class="border-2 border-white px-8 py-3 rounded-lg font-bold hover:bg-white hover:text-carnelian transition-all">Interactive Events</a>
+            <div class="flex flex-wrap gap-5">
+                <a href="#events" class="btn-primary px-10 py-4 rounded-xl font-bold text-lg">Explore Portfolio</a>
+                <a href="#map-section" class="px-10 py-4 rounded-xl font-bold text-lg border-2 border-gray-200 hover:border-carnelian hover:text-carnelian transition-all">Regional Hubs</a>
             </div>
         </div>
-        <!-- Decorative Shapes -->
-        <div class="absolute -top-24 -right-24 w-96 h-96 bg-red-400 rounded-full opacity-20 blur-3xl"></div>
-        <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-red-800 rounded-full opacity-30 blur-3xl"></div>
+        <!-- Decorative Background Element -->
+        <div class="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-red-50 to-transparent -z-10 opacity-60"></div>
+        <div class="absolute -top-40 -right-40 w-96 h-96 bg-carnelian rounded-full opacity-5 blur-[120px]"></div>
     </header>
 
-    <!-- About Section & Timeline -->
-    <section id="about" class="py-24 px-8 max-w-6xl mx-auto">
-        <div class="grid md:grid-cols-2 gap-16 items-center">
+    <!-- About Section -->
+    <section id="about" class="py-32 px-8 max-w-6xl mx-auto">
+        <div class="grid md:grid-cols-2 gap-20 items-start">
             <div data-aos="fade-right">
-                <h2 class="text-4xl font-bold mb-6 text-carnelian">Our Journey Since 1991</h2>
-                <p class="text-lg text-gray-600 mb-8 leading-relaxed">
-                    Carnelian’s team members have been active across the length and breadth of Pakistan, adding value to organizations small and large, local and global.
+                <h2 class="text-xs font-black text-carnelian uppercase tracking-[0.3em] mb-4">Our Legacy</h2>
+                <h3 class="text-4xl md:text-5xl font-black mb-8 leading-tight">Decades of Excellence across Pakistan</h3>
+                <p class="text-lg text-gray-500 mb-12 leading-relaxed font-medium">
+                    Since 1991, we have navigated the complexities of human factors and business realities to position Carnelian as a pioneer in communication strategy.
                 </p>
                 
-                <div class="space-y-8 border-l-2 border-gray-200 ml-3 pl-8 relative">
+                <div class="space-y-12 border-l-2 border-gray-100 ml-3 pl-10 relative">
+                    <div class="timeline-item relative" data-aos="fade-up">
+                        <span class="block font-black text-carnelian text-2xl mb-2">1991</span>
+                        <p class="text-gray-500 font-medium">Founded with a vision to revolutionize organizational communication.</p>
+                    </div>
                     <div class="timeline-item relative" data-aos="fade-up" data-aos-delay="100">
-                        <span class="block font-bold text-carnelian text-lg">1991</span>
-                        <p class="text-gray-600">Established as a pioneering communication consulting firm in Pakistan.</p>
+                        <span class="block font-black text-carnelian text-2xl mb-2">2005</span>
+                        <p class="text-gray-500 font-medium">Strategic expansion into Islamabad, Lahore, and Karachi hubs.</p>
                     </div>
                     <div class="timeline-item relative" data-aos="fade-up" data-aos-delay="200">
-                        <span class="block font-bold text-carnelian text-lg">2005</span>
-                        <p class="text-gray-600">Expanded to major regional hubs: Islamabad, Lahore, and Karachi.</p>
-                    </div>
-                    <div class="timeline-item relative" data-aos="fade-up" data-aos-delay="300">
-                        <span class="block font-bold text-carnelian text-lg">Today</span>
-                        <p class="text-gray-600">Full-service partners in Training, Coaching, Branding, and Event Management.</p>
+                        <span class="block font-black text-carnelian text-2xl mb-2">2026</span>
+                        <p class="text-gray-500 font-medium">Leading the digital-first era of stakeholder engagement and branding.</p>
                     </div>
                 </div>
             </div>
-            <div class="bg-gray-200 rounded-2xl h-[400px] overflow-hidden relative group" data-aos="fade-left">
-                <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-all flex items-center justify-center">
-                    <span class="text-white font-bold text-2xl border-2 border-white px-6 py-2">Consulting Excellence</span>
+            <div class="sticky top-32" data-aos="fade-left">
+                <div class="aspect-[4/5] bg-gray-100 rounded-[3rem] overflow-hidden shadow-2xl relative border-[12px] border-white">
+                    <img src="https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&q=80&w=2074" class="w-full h-full object-cover grayscale-[0.2] hover:grayscale-0 transition-all duration-700" alt="Consulting">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                    <div class="absolute bottom-10 left-10 text-white">
+                        <div class="text-4xl font-black">35+</div>
+                        <div class="text-sm font-bold uppercase tracking-widest opacity-80">Years of Experience</div>
+                    </div>
                 </div>
-                <img src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80&w=2070" class="w-full h-full object-cover" alt="Consulting">
             </div>
         </div>
     </section>
 
     <!-- Services Section -->
-    <section id="services" class="py-24 bg-white px-8">
-        <div class="max-w-6xl mx-auto text-center mb-16">
-            <h2 class="text-4xl font-bold text-carnelian mb-4">Our Expertise</h2>
-            <p class="text-gray-600 max-w-2xl mx-auto">Providing a diverse range of services to enable effective communication with stakeholders.</p>
+    <section id="services" class="py-32 bg-gray-900 text-white px-8">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-end mb-20">
+            <div class="max-w-xl">
+                <h2 class="text-xs font-black text-carnelian uppercase tracking-[0.3em] mb-4">What we do</h2>
+                <h3 class="text-4xl md:text-5xl font-black">Holistic Consulting for the Modern Enterprise</h3>
+            </div>
+            <p class="text-gray-400 font-medium md:max-w-xs mt-6 md:mt-0">
+                Enabling clients to communicate with precision across all stakeholder levels.
+            </p>
         </div>
-        <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-10">
             <!-- Service Cards -->
-            <div class="p-8 rounded-2xl bg-gray-50 hover:bg-red-50 hover:-translate-y-2 transition-all border border-transparent hover:border-red-100" data-aos="fade-up">
-                <div class="w-12 h-12 bg-carnelian rounded-lg mb-6 flex items-center justify-center text-white text-2xl">🎓</div>
-                <h3 class="text-xl font-bold mb-4">Training & Coaching</h3>
-                <p class="text-gray-600">Enabling teams with motivated leadership and skill development programs.</p>
+            <div class="p-10 rounded-3xl bg-white/5 border border-white/10 hover:bg-carnelian transition-all duration-500 group" data-aos="fade-up">
+                <div class="text-4xl mb-8 group-hover:scale-110 transition-transform">🎓</div>
+                <h3 class="text-2xl font-black mb-6">Training & Coaching</h3>
+                <p class="text-gray-400 group-hover:text-white/80 leading-relaxed font-medium">Developing high-performance teams through behavioral leadership and tactical coaching.</p>
             </div>
-            <div class="p-8 rounded-2xl bg-gray-50 hover:bg-red-50 hover:-translate-y-2 transition-all border border-transparent hover:border-red-100" data-aos="fade-up" data-aos-delay="100">
-                <div class="w-12 h-12 bg-carnelian rounded-lg mb-6 flex items-center justify-center text-white text-2xl">🏷️</div>
-                <h3 class="text-xl font-bold mb-4">Branding</h3>
-                <p class="text-gray-600">Strategically positioning your identity for aligned partners and engaged customers.</p>
+            <div class="p-10 rounded-3xl bg-white/5 border border-white/10 hover:bg-carnelian transition-all duration-500 group" data-aos="fade-up" data-aos-delay="100">
+                <div class="text-4xl mb-8 group-hover:scale-110 transition-transform">🏷️</div>
+                <h3 class="text-2xl font-black mb-6">Branding & Strategy</h3>
+                <p class="text-gray-400 group-hover:text-white/80 leading-relaxed font-medium">Defining organizational identity that resonates with both employees and external partners.</p>
             </div>
-            <div class="p-8 rounded-2xl bg-gray-50 hover:bg-red-50 hover:-translate-y-2 transition-all border border-transparent hover:border-red-100" data-aos="fade-up" data-aos-delay="200">
-                <div class="w-12 h-12 bg-carnelian rounded-lg mb-6 flex items-center justify-center text-white text-2xl">📅</div>
-                <h3 class="text-xl font-bold mb-4">Event Management</h3>
-                <p class="text-gray-600">Creating memorable experiences that resonate with your diverse stakeholders.</p>
+            <div class="p-10 rounded-3xl bg-white/5 border border-white/10 hover:bg-carnelian transition-all duration-500 group" data-aos="fade-up" data-aos-delay="200">
+                <div class="text-4xl mb-8 group-hover:scale-110 transition-transform">📅</div>
+                <h3 class="text-2xl font-black mb-6">Event Management</h3>
+                <p class="text-gray-400 group-hover:text-white/80 leading-relaxed font-medium">Creating immersive experiences that leave lasting impressions on your diverse stakeholders.</p>
             </div>
         </div>
     </section>
 
     <!-- Map Section -->
-    <section id="map-section" class="py-24 px-8 bg-gray-100">
-        <div class="max-w-6xl mx-auto mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <div>
-                <h2 class="text-4xl font-bold text-carnelian mb-4">Regional Office Hubs</h2>
-                <p class="text-gray-600">Our physical presence across Pakistan. Hover or click on a hub to see more details.</p>
+    <section id="map-section" class="py-32 px-8 bg-white overflow-hidden">
+        <div class="max-w-6xl mx-auto mb-20 flex flex-col md:flex-row md:items-end justify-between gap-10">
+            <div class="max-w-2xl">
+                <h2 class="text-xs font-black text-carnelian uppercase tracking-[0.3em] mb-4">Regional Reach</h2>
+                <h3 class="text-4xl md:text-5xl font-black">Our Strategic Hubs</h3>
+                <p class="text-gray-500 mt-6 font-medium text-lg leading-relaxed">Located at the heart of Pakistan's economic centers, our hubs provide localized expertise with a national vision.</p>
             </div>
             <div class="flex gap-4">
-                <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm text-sm">
-                    <span class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
-                    <span>Live Hubs</span>
+                <div class="bg-gray-50 border border-gray-100 px-6 py-3 rounded-2xl shadow-sm text-sm font-bold flex items-center gap-3">
+                    <span class="w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
+                    <span class="text-gray-800">Operational Excellence</span>
                 </div>
             </div>
         </div>
-        <div class="max-w-6xl mx-auto shadow-2xl relative">
-            <div id="map"></div>
-            <!-- Legend / Stats -->
-            <div class="absolute bottom-8 left-8 z-[1000] bg-white/90 backdrop-blur p-4 rounded-xl shadow-lg border border-white/20 hidden md:block">
-                <h4 class="font-bold text-carnelian mb-2">Total Outreach</h4>
-                <div class="grid grid-cols-2 gap-4">
+        <div class="max-w-7xl mx-auto relative px-4">
+            <div id="map" class="shadow-[0_40px_100px_-20px_rgba(0,0,0,0.15)]"></div>
+            <!-- Stats Overlay -->
+            <div class="absolute top-10 right-14 z-[1000] glass-panel p-8 rounded-3xl shadow-2xl border border-white hidden lg:block max-w-xs">
+                <h4 class="font-black text-gray-900 text-xl mb-6">Nationwide Impact</h4>
+                <div class="space-y-6">
                     <div>
-                        <span class="block text-2xl font-bold">500+</span>
-                        <span class="text-xs text-gray-500 uppercase font-semibold">Clients Served</span>
+                        <span class="block text-4xl font-black text-carnelian">500+</span>
+                        <span class="text-xs text-gray-400 uppercase font-black tracking-widest">Global Clients</span>
                     </div>
-                    <div>
-                        <span class="block text-2xl font-bold">12k+</span>
-                        <span class="text-xs text-gray-500 uppercase font-semibold">Trained Persons</span>
+                    <div class="pt-6 border-t border-gray-100">
+                        <span class="block text-4xl font-black text-gray-900">12,000+</span>
+                        <span class="text-xs text-gray-400 uppercase font-black tracking-widest">Leaders Trained</span>
                     </div>
                 </div>
             </div>
@@ -175,213 +230,483 @@
     </section>
 
     <!-- Events Graph Section -->
-    <section id="events" class="py-24 px-8 bg-white">
-        <div class="max-w-6xl mx-auto mb-12 text-center">
-            <h2 class="text-4xl font-bold text-carnelian mb-4">Interactive Events Explorer</h2>
-            <p class="text-gray-600 max-w-2xl mx-auto">Explore our diverse portfolio of events and their interconnections. Click a node to expand details.</p>
+    <section id="events" class="py-32 px-8 bg-white border-t border-gray-50">
+        <div class="max-w-6xl mx-auto mb-20 text-center">
+            <h2 class="text-xs font-black text-carnelian uppercase tracking-[0.3em] mb-4">Interactive Portfolio</h2>
+            <h3 class="text-4xl md:text-6xl font-black mb-8">Exploring the Ecosystem</h3>
+            <p class="text-gray-500 max-w-2xl mx-auto font-medium text-lg">
+                Witness how our central philosophy branches into regional hubs and bespoke events. <br>
+                <span class="text-carnelian font-bold">Interact with the graph to dive deeper.</span>
+            </p>
         </div>
-        <div class="max-w-6xl mx-auto">
-            <div class="grid md:grid-cols-4 gap-8">
-                <div class="md:col-span-3">
-                    <div id="network"></div>
+        <div class="max-w-[1400px] mx-auto">
+            <div class="grid lg:grid-cols-4 gap-12 items-start">
+                <div class="lg:col-span-3">
+                    <div id="network" class="shadow-inner border border-gray-100"></div>
                 </div>
-                <div class="bg-gray-50 rounded-2xl p-6 border border-gray-200" id="node-details">
-                    <h3 class="text-xl font-bold text-carnelian mb-4">Event Details</h3>
-                    <div id="detail-content">
-                        <p class="text-gray-400 italic">Select a node in the graph to view details here.</p>
+                <div class="lg:sticky lg:top-32 glass-panel rounded-[2rem] p-10 border border-red-50 shadow-xl" id="node-details">
+                    <div id="detail-placeholder">
+                        <div class="w-16 h-16 bg-red-50 text-carnelian rounded-2xl flex items-center justify-center text-3xl mb-8 font-black">?</div>
+                        <h3 class="text-2xl font-black text-gray-900 mb-6 tracking-tight">Ecosystem Details</h3>
+                        <p class="text-gray-400 font-medium leading-relaxed italic">Select a hub or event node in the graph to explore our strategic impact.</p>
                     </div>
+                    <div id="detail-content" class="hidden"></div>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Footer -->
-    <footer class="bg-carnelian text-white py-12 px-8">
-        <div class="max-w-6xl mx-auto grid md:grid-cols-4 gap-12">
+    <footer class="bg-gray-900 text-white py-24 px-8 border-t border-white/5">
+        <div class="max-w-6xl mx-auto grid md:grid-cols-4 gap-20">
             <div class="md:col-span-2">
-                <div class="flex items-center gap-2 mb-6">
-                    <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-carnelian font-bold text-xl">C</div>
-                    <span class="text-2xl font-bold tracking-tight">Carnelian</span>
+                <div class="flex items-center gap-3 mb-10">
+                    <div class="w-11 h-11 bg-carnelian rounded-xl flex items-center justify-center text-white">
+                        <svg viewBox="0 0 24 24" class="w-7 h-7 fill-current"><path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 18l-8-4V8.5l8 4 8-4V16l-8 4z"/></svg>
+                    </div>
+                    <span class="text-2xl font-black tracking-tighter uppercase">Carnelian</span>
                 </div>
-                <p class="text-red-100 max-w-sm">
-                    Full-service Communication Consulting partner since 1991. Enabling clients to effectively communicate with diverse stakeholders.
+                <p class="text-gray-400 max-w-sm text-lg leading-relaxed font-medium">
+                    Redefining corporate communication since 1991. Your full-service partner for training, coaching, and strategic branding.
                 </p>
             </div>
             <div>
-                <h4 class="font-bold mb-6">Links</h4>
-                <ul class="space-y-4 text-red-100">
-                    <li><a href="#" class="hover:text-white transition-colors">Home</a></li>
-                    <li><a href="#about" class="hover:text-white transition-colors">About Us</a></li>
-                    <li><a href="#map-section" class="hover:text-white transition-colors">Our Hubs</a></li>
-                    <li><a href="#services" class="hover:text-white transition-colors">Services</a></li>
+                <h4 class="font-black text-sm uppercase tracking-[0.3em] mb-10 text-carnelian">Explore</h4>
+                <ul class="space-y-6 text-gray-400 font-bold uppercase text-xs tracking-widest">
+                    <li><a href="#" class="hover:text-white transition-colors">Case Studies</a></li>
+                    <li><a href="#about" class="hover:text-white transition-colors">Our Vision</a></li>
+                    <li><a href="#map-section" class="hover:text-white transition-colors">Global Network</a></li>
+                    <li><a href="#services" class="hover:text-white transition-colors">Expertise</a></li>
                 </ul>
             </div>
             <div>
-                <h4 class="font-bold mb-6">Contact</h4>
-                <p class="text-red-100 mb-2">info@carnelian.com.pk</p>
-                <p class="text-red-100">+92 (21) 111-222-333</p>
-                <div class="flex gap-4 mt-6">
-                    <a href="#" class="w-10 h-10 bg-red-800 rounded-full flex items-center justify-center hover:bg-red-700 transition-colors">in</a>
-                    <a href="#" class="w-10 h-10 bg-red-800 rounded-full flex items-center justify-center hover:bg-red-700 transition-colors">f</a>
-                    <a href="#" class="w-10 h-10 bg-red-800 rounded-full flex items-center justify-center hover:bg-red-700 transition-colors">t</a>
+                <h4 class="font-black text-sm uppercase tracking-[0.3em] mb-10 text-carnelian">Contact</h4>
+                <p class="text-white font-black text-lg mb-4">info@carnelian.com.pk</p>
+                <p class="text-gray-400 font-medium">+92 (21) 111-222-333</p>
+                <div class="flex gap-6 mt-12">
+                    <a href="#" class="text-gray-500 hover:text-white transition-colors text-2xl font-black italic">in</a>
+                    <a href="#" class="text-gray-500 hover:text-white transition-colors text-2xl font-black italic">f</a>
+                    <a href="#" class="text-gray-500 hover:text-white transition-colors text-2xl font-black italic">t</a>
                 </div>
             </div>
         </div>
-        <div class="max-w-6xl mx-auto border-t border-red-800 mt-12 pt-8 text-center text-red-200 text-sm">
-            © 2026 Carnelian. All rights reserved.
+        <div class="max-w-6xl mx-auto border-t border-white/5 mt-20 pt-10 flex flex-col md:flex-row justify-between items-center gap-6">
+            <p class="text-gray-500 text-sm font-bold tracking-widest uppercase">© 2026 Carnelian. Excellence in Motion.</p>
+            <div class="flex gap-8 text-xs font-black uppercase tracking-widest text-gray-500">
+                <a href="#" class="hover:text-white">Privacy</a>
+                <a href="#" class="hover:text-white">Terms</a>
+            </div>
         </div>
     </footer>
 
     <script>
         // Initialize AOS
         AOS.init({
-            duration: 800,
-            once: true
+            duration: 1000,
+            once: true,
+            easing: 'ease-out-cubic'
         });
 
-        // Map Implementation
+        // Map Implementation (using palette colors)
         var map = L.map('map', {
-            scrollWheelZoom: false
-        }).setView([30.3753, 69.3451], 5); // Centered on Pakistan
+            scrollWheelZoom: false,
+            zoomControl: false
+        }).setView([30.3753, 69.3451], 5);
 
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '©OpenStreetMap, ©CartoDB'
+            attribution: '©OpenStreetMap'
         }).addTo(map);
 
         const hubs = [
-            {
-                name: "Karachi Hub",
-                lat: 24.8607,
-                lng: 67.0011,
-                lead: "Ahsan Iqbal",
-                clients: 150,
-                img: "https://i.pravatar.cc/150?u=ahsan"
-            },
-            {
-                name: "Lahore Hub",
-                lat: 31.5204,
-                lng: 74.3587,
-                lead: "Sarah Ahmed",
-                clients: 120,
-                img: "https://i.pravatar.cc/150?u=sarah"
-            },
-            {
-                name: "Islamabad Hub",
-                lat: 33.6844,
-                lng: 73.0479,
-                lead: "Zohaib Khan",
-                clients: 90,
-                img: "https://i.pravatar.cc/150?u=zohaib"
-            }
+            { name: "Karachi Hub", lat: 24.8607, lng: 67.0011, lead: "Ahsan Iqbal", clients: 150, img: "https://i.pravatar.cc/150?u=ahsan" },
+            { name: "Lahore Hub", lat: 31.5204, lng: 74.3587, lead: "Sarah Ahmed", clients: 120, img: "https://i.pravatar.cc/150?u=sarah" },
+            { name: "Islamabad Hub", lat: 33.6844, lng: 73.0479, lead: "Zohaib Khan", clients: 90, img: "https://i.pravatar.cc/150?u=zohaib" }
         ];
 
         hubs.forEach(hub => {
             const popupContent = `
-                <div class="custom-popup">
-                    <div class="bg-carnelian p-4 text-white">
-                        <h3 class="font-bold text-lg">${hub.name}</h3>
+                <div class="custom-popup font-sans">
+                    <div class="bg-[#e21713] p-5 text-white">
+                        <h3 class="font-black text-xl tracking-tight">${hub.name}</h3>
+                        <p class="text-xs font-bold uppercase tracking-widest opacity-80">Regional Lead Hub</p>
                     </div>
-                    <div class="p-4 flex gap-4 items-center">
-                        <img src="${hub.img}" class="w-12 h-12 rounded-full border-2 border-carnelian" alt="${hub.lead}">
+                    <div class="p-6 flex gap-5 items-center bg-white">
+                        <img src="${hub.img}" class="w-14 h-14 rounded-2xl border-2 border-red-50 shadow-md" alt="${hub.lead}">
                         <div>
-                            <p class="font-bold text-gray-800 leading-tight">${hub.lead}</p>
-                            <p class="text-xs text-gray-500">Regional Lead</p>
+                            <p class="font-black text-gray-900 text-lg leading-tight">${hub.lead}</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Strategic Director</p>
                         </div>
                     </div>
-                    <div class="px-4 pb-4 border-t pt-2 mt-2 bg-gray-50">
-                        <div class="flex justify-between items-center">
-                            <span class="text-xs font-semibold text-gray-500 uppercase">Clients Served</span>
-                            <span class="font-bold text-carnelian">${hub.clients}+</span>
+                    <div class="px-6 pb-6 bg-white">
+                        <div class="p-4 bg-gray-50 rounded-2xl flex justify-between items-center border border-gray-100">
+                            <span class="text-xs font-black text-gray-400 uppercase tracking-widest">Outreach</span>
+                            <span class="font-black text-[#e21713] text-lg">${hub.clients}+ Clients</span>
                         </div>
-                    </div>
-                    <div class="p-4 pt-0">
-                        <button class="w-full bg-carnelian/10 text-carnelian font-bold py-2 rounded-lg text-sm hover:bg-carnelian hover:text-white transition-all">View LinkedIn Profile</button>
+                        <button class="w-full mt-4 bg-[#35314e] text-white font-black py-3 rounded-xl text-xs uppercase tracking-[0.2em] hover:bg-[#e21713] transition-all">Connect Hub</button>
                     </div>
                 </div>
             `;
             
-            L.marker([hub.lat, hub.lng]).addTo(map)
-                .bindPopup(popupContent);
+            const marker = L.circleMarker([hub.lat, hub.lng], {
+                radius: 12,
+                fillColor: "#e21713",
+                color: "#fff",
+                weight: 4,
+                opacity: 1,
+                fillOpacity: 1
+            }).addTo(map).bindPopup(popupContent);
         });
 
-        // Network Graph Implementation
-        var nodes = new vis.DataSet([
-            { id: 1, label: 'Annual Strategy Summit', group: 'corporate', title: 'Our flagship event for corporate leaders.' },
-            { id: 2, label: 'Leadership Coaching', group: 'training', title: 'Intensive 1-on-1 sessions.' },
-            { id: 3, label: 'Brand Identity Workshop', group: 'branding', title: 'Creative sessions for startups.' },
-            { id: 4, label: 'Team Bonding Retreat', group: 'training', title: 'Outdoor activities for motivation.' },
-            { id: 5, label: 'Customer Experience Expo', group: 'corporate', title: 'Showcasing modern CX strategies.' },
-            { id: 6, label: 'Digital Branding Seminar', group: 'branding', title: 'Exploring the digital landscape.' }
-        ]);
+        // --- CONCEPTUAL D3.JS GRAPH IMPLEMENTATION (V4.1) ---
+        
+        const allNodes = [
+            { id: 0, label: 'CARNELIAN', type: 'center', size: 100 },
+            { id: 'h1', label: 'Karachi', type: 'hub', expanded: false, img: 'https://images.unsplash.com/photo-1563911302283-d2bc129e7570?auto=format&fit=crop&q=80&w=1000' },
+            { id: 'h2', label: 'Lahore', type: 'hub', expanded: false, img: 'https://images.unsplash.com/photo-1596464716127-f2a82984de30?auto=format&fit=crop&q=80&w=1000' },
+            { id: 'h3', label: 'Islamabad', type: 'hub', expanded: false, img: 'https://images.unsplash.com/photo-1622546758296-482202744a67?auto=format&fit=crop&q=80&w=1000' },
+            { id: 1, label: 'Strategy Summit', type: 'event', hub: 'h1' },
+            { id: 4, label: 'Team Retreat', type: 'event', hub: 'h1' },
+            { id: 3, label: 'Identity Workshop', type: 'event', hub: 'h2' },
+            { id: 5, label: 'CX Expo', type: 'event', hub: 'h2' },
+            { id: 2, label: 'Leadership Coaching', type: 'event', hub: 'h3' },
+            { id: 6, label: 'Branding Seminar', type: 'event', hub: 'h3' }
+        ];
 
-        var edges = new vis.DataSet([
-            { from: 1, to: 2, label: 'Next Step' },
-            { from: 1, to: 5, label: 'Related' },
-            { from: 2, to: 4, label: 'Follow-up' },
-            { from: 3, to: 6, label: 'Evolution' },
-            { from: 5, to: 3, label: 'Integrated' }
-        ]);
+        const allLinks = [
+            { source: 0, target: 'h1', label: 'KARACHI SECTOR' },
+            { source: 0, target: 'h2', label: 'LAHORE SECTOR' },
+            { source: 0, target: 'h3', label: 'ISLAMABAD SECTOR' },
+            { source: 'h1', target: 1 }, { source: 'h1', target: 4 },
+            { source: 'h2', target: 3 }, { source: 'h2', target: 5 },
+            { source: 'h3', target: 2 }, { source: 'h3', target: 6 }
+        ];
 
-        var container = document.getElementById('network');
-        var data = {
-            nodes: nodes,
-            edges: edges
+        let currentNodes = allNodes.filter(n => n.type !== 'event');
+        let currentLinks = allLinks.filter(l => typeof l.source === 'object' ? l.source.type !== 'event' : !allNodes.find(n => n.id === l.target && n.type === 'event'));
+
+        const width = document.getElementById('network').clientWidth;
+        const height = document.getElementById('network').clientHeight;
+
+        const svg = d3.select("#network")
+            .append("svg")
+            .attr("width", "100%")
+            .attr("height", "100%")
+            .attr("viewBox", [0, 0, width, height]);
+
+        const g = svg.append("g");
+
+        // Zoom Behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 3])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Simulation
+        const simulation = d3.forceSimulation(currentNodes)
+            .force("link", d3.forceLink(currentLinks).id(d => d.id).distance(d => d.source.type === 'center' ? 300 : 100))
+            .force("charge", d3.forceManyBody().strength(-1200))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("collide", d3.forceCollide().radius(80));
+
+        // Define ClipPaths (Fixed coordinates)
+        const defs = svg.append("defs");
+
+        function updateGraph() {
+            // Update ClipPaths
+            const hubNodes = currentNodes.filter(n => n.type === 'hub');
+            const clipPaths = defs.selectAll("clipPath")
+                .data(hubNodes, d => d.id);
+
+            clipPaths.exit().remove();
+            
+            clipPaths.enter().append("clipPath")
+                .attr("id", d => `clip-${d.id}`)
+                .append("rect")
+                .attr("x", -50)
+                .attr("y", -80)
+                .attr("width", 100)
+                .attr("height", 160)
+                .attr("rx", 40)
+                .attr("ry", 40);
+
+            // Links
+            const link = g.selectAll(".link")
+                .data(currentLinks, d => `${d.source.id || d.source}-${d.target.id || d.target}`);
+
+            link.exit().remove();
+
+            const linkEnter = link.enter().append("path")
+                .attr("class", "link")
+                .attr("id", (d, i) => `link-${d.source.id || d.source}-${d.target.id || d.target}`)
+                .attr("stroke", d => {
+                    const src = typeof d.source === 'object' ? d.source : allNodes.find(n => n.id === d.source);
+                    return src.type === 'center' ? "rgba(226, 23, 19, 0.15)" : "rgba(53, 49, 78, 0.1)";
+                })
+                .attr("stroke-width", d => {
+                    const src = typeof d.source === 'object' ? d.source : allNodes.find(n => n.id === d.source);
+                    return src.type === 'center' ? 8 : 2;
+                })
+                .attr("fill", "none")
+                .style("cursor", d => {
+                    const src = typeof d.source === 'object' ? d.source : allNodes.find(n => n.id === d.source);
+                    return src.type === 'center' ? "pointer" : "default";
+                });
+
+            // Link Labels
+            const labels = g.selectAll(".edge-label")
+                .data(currentLinks.filter(l => l.label), d => `${d.source.id || d.source}-${d.target.id || d.target}`);
+
+            labels.exit().remove();
+
+            labels.enter().append("text")
+                .attr("class", "edge-label")
+                .append("textPath")
+                .attr("xlink:href", d => `#link-${d.source.id || d.source}-${d.target.id || d.target}`)
+                .attr("startOffset", "50%")
+                .attr("text-anchor", "middle")
+                .style("font-size", "10px")
+                .style("font-weight", "900")
+                .style("fill", "#ce6e61")
+                .style("text-transform", "uppercase")
+                .style("letter-spacing", "2px")
+                .text(d => d.label);
+
+            // Nodes
+            const node = g.selectAll(".node-group")
+                .data(currentNodes, d => d.id);
+
+            node.exit().remove();
+
+            const nodeEnter = node.enter().append("g")
+                .attr("class", d => `node-group node-${d.type}`)
+                .on("click", (event, d) => {
+                    if (d.type === 'hub') toggleHub(event, d);
+                    handleNodeClick(event, d);
+                })
+                .call(d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended));
+
+            // Center Node
+            nodeEnter.filter(d => d.type === 'center')
+                .append("text")
+                .attr("text-anchor", "middle")
+                .attr("dy", ".35em")
+                .style("font-family", "Arial Black, sans-serif")
+                .style("font-size", "64px")
+                .style("font-weight", "950")
+                .style("fill", "var(--c-red-bright)")
+                .text(d => d.label);
+
+            // Hub Nodes
+            const hubsEnter = nodeEnter.filter(d => d.type === 'hub');
+            
+            hubsEnter.append("rect")
+                .attr("x", -50)
+                .attr("y", -80)
+                .attr("width", 100)
+                .attr("height", 160)
+                .attr("rx", 40)
+                .attr("ry", 40)
+                .attr("fill", "var(--c-cream)")
+                .attr("stroke", "var(--c-red-bright)")
+                .attr("stroke-width", 4);
+
+            hubsEnter.append("image")
+                .attr("xlink:href", d => d.img)
+                .attr("x", -50)
+                .attr("y", -80)
+                .attr("width", 100)
+                .attr("height", 160)
+                .attr("clip-path", d => `url(#clip-${d.id})`)
+                .attr("preserveAspectRatio", "xMidYMid slice");
+
+            hubsEnter.append("rect")
+                .attr("x", -50)
+                .attr("y", 30)
+                .attr("width", 100)
+                .attr("height", 50)
+                .attr("rx", 10)
+                .attr("fill", "rgba(255,255,255,0.95)");
+
+            hubsEnter.append("text")
+                .attr("text-anchor", "middle")
+                .attr("y", 60)
+                .style("font-weight", "900")
+                .style("font-size", "12px")
+                .style("text-transform", "uppercase")
+                .style("fill", "var(--c-dark-navy)")
+                .text(d => d.label);
+
+            // Event Nodes
+            const eventsEnter = nodeEnter.filter(d => d.type === 'event');
+            
+            eventsEnter.append("circle")
+                .attr("r", 10)
+                .attr("fill", "#fff")
+                .attr("stroke", "var(--c-red-bright)")
+                .attr("stroke-width", 3)
+                .style("filter", "drop-shadow(0 4px 6px rgba(0,0,0,0.1))");
+
+            eventsEnter.append("text")
+                .attr("text-anchor", "middle")
+                .attr("y", 25)
+                .style("font-size", "10px")
+                .style("font-weight", "bold")
+                .style("fill", "var(--c-dark-navy)")
+                .text(d => d.label);
+
+            simulation.nodes(currentNodes);
+            simulation.force("link").links(currentLinks);
+            simulation.alpha(1).restart();
+        }
+
+        function toggleHub(event, hub) {
+            event.stopPropagation();
+            hub.expanded = !hub.expanded;
+            
+            if (hub.expanded) {
+                const newNodes = allNodes.filter(n => n.hub === hub.id);
+                const newLinks = allLinks.filter(l => l.source === hub.id || (typeof l.source === 'object' && l.source.id === hub.id));
+                currentNodes.push(...newNodes);
+                currentLinks.push(...newLinks);
+                zoomToCluster(hub.id);
+            } else {
+                currentNodes = currentNodes.filter(n => n.hub !== hub.id);
+                currentLinks = currentLinks.filter(l => {
+                    const srcId = l.source.id || l.source;
+                    const tgtId = l.target.id || l.target;
+                    return allNodes.find(n => n.id === srcId).hub !== hub.id && allNodes.find(n => n.id === tgtId).hub !== hub.id;
+                });
+                fitGraph();
+            }
+            updateGraph();
+        }
+
+        // Physics Ticking
+        simulation.on("tick", () => {
+            g.selectAll(".link").attr("d", d => {
+                const dx = d.target.x - d.source.x,
+                      dy = d.target.y - d.source.y,
+                      dr = Math.sqrt(dx * dx + dy * dy);
+                return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
+            });
+
+            g.selectAll(".node-group").attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        updateGraph();
+        
+        // Initial Fit
+        setTimeout(fitGraph, 500);
+
+        function fitGraph() {
+            const bounds = g.node().getBBox();
+            if (bounds.width === 0) return;
+            
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = (fullWidth - 150) / bounds.width;
+            const heightScale = (fullHeight - 150) / bounds.height;
+            const scale = Math.min(widthScale, heightScale, 0.8);
+            
+            const midX = bounds.x + bounds.width / 2;
+            const midY = bounds.y + bounds.height / 2;
+
+            const t = d3.zoomIdentity
+                .translate(fullWidth / 2 - scale * midX, fullHeight / 2 - scale * midY)
+                .scale(scale);
+
+            svg.transition().duration(1200).call(zoom.transform, t);
+            zoom.scaleExtent([scale * 0.5, 3]);
+        }
+
+        function zoomToCluster(hubId) {
+            const nodesInCluster = currentNodes.filter(n => n.id === hubId || n.hub === hubId);
+            const xExtent = d3.extent(nodesInCluster, d => d.x);
+            const yExtent = d3.extent(nodesInCluster, d => d.y);
+            
+            const clusterWidth = xExtent[1] - xExtent[0] + 300;
+            const clusterHeight = yExtent[1] - yExtent[0] + 300;
+            const midX = (xExtent[0] + xExtent[1]) / 2;
+            const midY = (yExtent[0] + yExtent[1]) / 2;
+            
+            const scale = Math.min(width / clusterWidth, height / clusterHeight, 1.2);
+            const t = d3.zoomIdentity
+                .translate(width / 2 - scale * midX, height / 2 - scale * midY)
+                .scale(scale);
+
+            svg.transition().duration(1000).ease(d3.easeCubicInOut).call(zoom.transform, t);
+        }
+
+        const entityDetails = {
+            'h1': { title: "Karachi Hub", type: "Regional Hub", desc: "Leading the financial and commercial heart of Pakistan with high-impact corporate summits.", tags: ["Financial Center", "Hub"], img: 'https://images.unsplash.com/photo-1563911302283-d2bc129e7570?auto=format&fit=crop&q=80&w=1000' },
+            'h2': { title: "Lahore Hub", type: "Regional Hub", desc: "Our cultural and branding nerve center, driving creative excellence and consumer engagement.", tags: ["Cultural Hub", "Design"], img: 'https://images.unsplash.com/photo-1596464716127-f2a82984de30?auto=format&fit=crop&q=80&w=1000' },
+            'h3': { title: "Islamabad Hub", type: "Regional Hub", desc: "Connecting with global partners and public sector leadership from the capital.", tags: ["Capital Hub", "Diplomatic"], img: 'https://images.unsplash.com/photo-1622546758296-482202744a67?auto=format&fit=crop&q=80&w=1000' },
+            1: { title: "Annual Strategy Summit", date: "Nov 2025", desc: "A gathering of 200+ CEOs to redefine the Pakistani corporate landscape.", tags: ["Strategy", "Leadership"] },
+            2: { title: "Leadership Coaching", date: "Continuous", desc: "Intensive behavioral transformation for C-suite executives.", tags: ["Coaching", "HR"] },
+            3: { title: "Identity Workshop", date: "Dec 2025", desc: "Crafting resonant brand voices for emerging market leaders.", tags: ["Branding", "Creative"] },
+            4: { title: "Team Bonding Retreat", date: "Quarterly", desc: "Breaking silos and fostering authentic organizational communication.", tags: ["Teamwork", "Culture"] },
+            5: { title: "Customer Experience Expo", date: "Feb 2026", desc: "Showcasing modern CX strategies and digital engagement tools.", tags: ["CX", "Innovation"] },
+            6: { title: "Digital Branding Seminar", date: "Mar 2026", desc: "Navigating brand voice consistency in fragmented digital spaces.", tags: ["Digital", "Marketing"] }
         };
-        var options = {
-            nodes: {
-                shape: 'dot',
-                size: 25,
-                font: { size: 14, color: '#2D3436' },
-                borderWidth: 2,
-                shadow: true,
-                color: {
-                    background: '#ffffff',
-                    border: '#B03060',
-                    highlight: { background: '#B03060', border: '#8B0000' }
-                }
-            },
-            edges: {
-                width: 2,
-                color: { color: '#B03060', opacity: 0.3 },
-                font: { align: 'horizontal', size: 10 },
-                arrows: { to: { enabled: true, scaleFactor: 0.5 } }
-            },
-            groups: {
-                corporate: { color: { background: '#B03060', border: '#8B0000' }, font: { color: '#ffffff' } },
-                training: { color: { background: '#4A90E2', border: '#2A5C9A' }, font: { color: '#ffffff' } },
-                branding: { color: { background: '#F5A623', border: '#C58316' }, font: { color: '#ffffff' } }
-            },
-            interaction: { hover: true, tooltipDelay: 200 },
-            physics: { enabled: true, stabilization: true }
-        };
-        var network = new vis.Network(container, data, options);
 
-        const eventDetails = {
-            1: { title: "Annual Strategy Summit", date: "Nov 15, 2025", desc: "Our flagship event gathering 200+ CEOs and industry leaders to discuss the future of corporate communication in Pakistan.", tags: ["Strategy", "Leadership"] },
-            2: { title: "Leadership Coaching", date: "Monthly", desc: "Private sessions with our expert consultants focusing on behavioral leadership and emotional intelligence.", tags: ["Coaching", "HR"] },
-            3: { title: "Brand Identity Workshop", date: "Dec 05, 2025", desc: "A hands-on workshop to redefine organizational identity and align internal culture with external branding.", tags: ["Branding", "Creative"] },
-            4: { title: "Team Bonding Retreat", date: "Quarterly", desc: "Off-site activities designed to break silos and foster authentic communication between departments.", tags: ["Teamwork", "Motivation"] },
-            5: { title: "Customer Experience Expo", date: "Feb 10, 2026", desc: "Showcasing the latest tools and strategies for deepening customer engagement and loyalty.", tags: ["CX", "Customer Service"] },
-            6: { title: "Digital Branding Seminar", date: "Mar 22, 2026", desc: "How to maintain brand voice consistency across fragmented digital platforms.", tags: ["Digital", "Marketing"] }
-        };
+        function handleNodeClick(event, d) {
+            const detailDiv = document.getElementById('detail-content');
+            const placeholderDiv = document.getElementById('detail-placeholder');
+            const detail = entityDetails[d.id];
+            
+            if (!detail) {
+                placeholderDiv.classList.remove('hidden');
+                detailDiv.classList.add('hidden');
+                return;
+            }
 
-        network.on("click", function (params) {
-            if (params.nodes.length > 0) {
-                const nodeId = params.nodes[0];
-                const detail = eventDetails[nodeId];
-                const detailDiv = document.getElementById('detail-content');
-                
-                detailDiv.innerHTML = `
-                    <div class="animate-in fade-in duration-300">
-                        <span class="inline-block bg-carnelian/10 text-carnelian text-xs font-bold px-2 py-1 rounded mb-2">${detail.date}</span>
-                        <h4 class="text-xl font-bold mb-2">${detail.title}</h4>
-                        <p class="text-gray-600 text-sm mb-4">${detail.desc}</p>
-                        <div class="flex flex-wrap gap-2">
-                            ${detail.tags.map(tag => `<span class="bg-gray-200 px-2 py-1 rounded-full text-xs">#${tag}</span>`).join('')}
-                        </div>
-                        <button class="w-full mt-6 bg-carnelian text-white py-2 rounded-lg font-bold hover:opacity-90 transition-all">Register for Interest</button>
+            placeholderDiv.classList.add('hidden');
+            detailDiv.classList.remove('hidden');
+            
+            detailDiv.innerHTML = `
+                <div class="animate-in slide-in-from-bottom-4 duration-500">
+                    ${detail.img ? `<img src="${detail.img}" class="w-full h-48 object-cover rounded-[2rem] mb-8 shadow-2xl border border-white/50">` : ''}
+                    <div class="flex items-center gap-2 mb-6">
+                        <span class="inline-block bg-red-50 text-carnelian text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full border border-red-100">${detail.type || detail.date}</span>
                     </div>
-                `;
+                    <h4 class="text-4xl font-black mb-6 tracking-tight text-gray-900 leading-[1.1]">${detail.title}</h4>
+                    <p class="text-gray-500 font-medium leading-relaxed mb-10 text-lg">${detail.desc}</p>
+                    <div class="flex flex-wrap gap-3 mb-10">
+                        ${detail.tags.map(tag => `<span class="bg-white/50 text-gray-500 border border-gray-100 px-4 py-2 rounded-xl text-xs font-bold shadow-sm">#${tag}</span>`).join('')}
+                    </div>
+                    <button class="w-full btn-primary py-5 rounded-[1.5rem] font-black text-xs uppercase tracking-[0.3em] shadow-xl">Engage Concept</button>
+                </div>
+            `;
+        }
+
+        // Dragging
+        function dragstarted(event) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            event.subject.fx = event.subject.x;
+            event.subject.fy = event.subject.y;
+        }
+        function dragged(event) {
+            event.subject.fx = event.x;
+            event.subject.fy = event.y;
+        }
+        function dragended(event) {
+            if (!event.active) simulation.alphaTarget(0);
+            event.subject.fx = null;
+            event.subject.fy = null;
+        }
+
+        // Global SVG Click resets zoom
+        svg.on("click", (event) => {
+            if (event.target === svg.node()) {
+                fitGraph();
+                document.getElementById('detail-placeholder').classList.remove('hidden');
+                document.getElementById('detail-content').classList.add('hidden');
             }
         });
 

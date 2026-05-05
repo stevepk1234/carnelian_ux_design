@@ -3,713 +3,1087 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carnelian | Communication Consulting Prototype</title>
-    <!-- Tailwind CSS -->
+    <title>Carnelian | Communication Consulting</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- AOS for Animations -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    <!-- Leaflet JS for Maps -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <!-- D3.js & GSAP for Conceptual Graph -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
     <style>
         :root {
-            --c-red-bright: #e21713;
-            --c-dark-navy: #35314e;
+            --c-red: #e32000;
+            --c-navy: #34314d;
             --c-cream: #fbe4e1;
-            --c-red-deep: #840305;
-            --c-orange: #ed7b0a;
+            --c-deep-red: #840305;
             --c-maroon: #702830;
-            --c-red-alt: #a50705;
             --c-coral: #ce6e61;
         }
-        
-        body { background-color: #fff; color: var(--c-dark-navy); }
-        .bg-carnelian { background-color: var(--c-red-bright); }
-        .text-carnelian { color: var(--c-red-bright); }
-        .border-carnelian { border-color: var(--c-red-bright); }
-        
-        #map { height: 600px; width: 100%; border-radius: 1.5rem; filter: grayscale(0.2) contrast(1.1); }
-        #network { height: 750px; width: 100%; border-radius: 2rem; background: #fff; overflow: hidden; cursor: grab; }
-        #network:active { cursor: grabbing; }
-        
-        .node-hub rect { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .node-hub:hover rect { filter: drop-shadow(0 15px 30px rgba(226, 23, 19, 0.2)); }
-        
-        .edge-label { pointer-events: none; user-select: none; }
-        
-        .timeline-item::before {
-            content: '';
-            position: absolute;
-            left: -10px;
-            top: 5px;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: var(--c-red-bright);
-            border: 4px solid var(--c-cream);
-        }
-        
-        .custom-popup .leaflet-popup-content-wrapper {
-            border-radius: 20px;
-            padding: 0;
-            overflow: hidden;
-            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.1);
-        }
-        .custom-popup .leaflet-popup-content {
+
+        *, *::before, *::after { box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
             margin: 0;
-            width: 300px !important;
+            background: #fff;
+            color: var(--c-navy);
+            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+            overflow-x: hidden;
         }
 
+        /* NAV */
+        #navbar {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 900;
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+        #navbar.scrolled {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(16px);
+            box-shadow: 0 1px 0 rgba(0,0,0,0.06);
+        }
+        .nav-link {
+            position: relative; text-decoration: none;
+            transition: color 0.2s;
+        }
+        .nav-link::after {
+            content: ''; position: absolute; bottom: -4px; left: 0; right: 0;
+            height: 2px; background: var(--c-red);
+            transform: scaleX(0); transition: transform 0.25s ease;
+        }
+        .nav-link:hover::after { transform: scaleX(1); }
+
+        /* BUTTONS */
         .btn-primary {
-            background-color: var(--c-red-bright);
-            color: white;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: var(--c-red); color: white; border: none; cursor: pointer;
+            transition: background 0.25s, transform 0.2s, box-shadow 0.2s;
+            text-decoration: none; display: inline-block;
         }
         .btn-primary:hover {
-            background-color: var(--c-red-deep);
+            background: var(--c-deep-red);
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(226, 23, 19, 0.2);
+            box-shadow: 0 10px 24px rgba(226,23,19,0.25);
+        }
+        .btn-outline {
+            background: transparent; color: var(--c-navy); border: 2px solid #e5e7eb;
+            cursor: pointer; transition: border-color 0.25s, color 0.25s, transform 0.2s;
+            text-decoration: none; display: inline-block;
+        }
+        .btn-outline:hover {
+            border-color: var(--c-red); color: var(--c-red);
+            transform: translateY(-2px);
         }
 
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.05);
+        /* HERO */
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 8px 16px; border-radius: 999px;
+            background: #fef2f1; border: 1px solid rgba(226,23,19,0.15);
+            color: var(--c-red); font-size: 11px; font-weight: 900;
+            text-transform: uppercase; letter-spacing: 0.12em;
+        }
+        .hero-ping {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--c-red); animation: ping 1.5s ease-out infinite;
+        }
+        @keyframes ping {
+            0% { transform: scale(1); opacity: 1; }
+            80%, 100% { transform: scale(2.2); opacity: 0; }
         }
 
-        .node-event circle { transition: all 0.3s ease; }
-        .node-event:hover circle { r: 12; fill: var(--c-red-bright); }
+        /* TIMELINE */
+        .tl-dot {
+            width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+            background: var(--c-red); border: 3px solid white;
+            box-shadow: 0 0 0 3px rgba(226,23,19,0.18); margin-top: 3px;
+        }
+
+        /* SERVICE CARDS */
+        .service-card {
+            transition: transform 0.35s cubic-bezier(0.4,0,0.2,1), background 0.35s;
+        }
+        .service-card:hover { transform: translateY(-10px); }
+
+        /* MAP */
+        #map { height: 600px; width: 100%; border-radius: 2rem; }
+
+        #map-panel {
+            position: absolute; top: 0; right: 0;
+            width: 320px; height: 100%;
+            background: white;
+            border-radius: 0 2rem 2rem 0;
+            box-shadow: -16px 0 48px rgba(0,0,0,0.09);
+            transform: translateX(320px);
+            transition: transform 0.45s cubic-bezier(0.4,0,0.2,1);
+            z-index: 1000; overflow: hidden; pointer-events: none;
+            display: flex; flex-direction: column;
+        }
+        #map-panel.open { transform: translateX(0); pointer-events: all; }
+
+        .hub-event-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px; border-radius: 12px;
+            transition: background 0.2s; cursor: default;
+        }
+        .hub-event-item:hover { background: #f9fafb; }
+
+        /* Leaflet override */
+        .leaflet-popup-content-wrapper {
+            border-radius: 20px !important; padding: 0 !important;
+            overflow: hidden; box-shadow: 0 16px 48px rgba(0,0,0,0.12) !important;
+        }
+        .leaflet-popup-content { margin: 0 !important; width: 280px !important; }
+        .leaflet-popup-tip { background: white !important; }
+
+        /* Pulse keyframes for map markers */
+        @keyframes pulse-ring {
+            0%   { transform: scale(0.5); opacity: 0.7; }
+            100% { transform: scale(2.8); opacity: 0; }
+        }
+
+        /* GRAPH */
+        #graph-container {
+            width: 100%; height: 740px;
+            background: #f8f8f8; border-radius: 2rem;
+            border: 1px solid #efefef; overflow: hidden;
+            position: relative; cursor: grab;
+        }
+        #graph-container:active { cursor: grabbing; }
+        #graph-svg { width: 100%; height: 100%; }
+
+        .graph-controls {
+            position: absolute; top: 20px; right: 20px;
+            display: flex; flex-direction: column; gap: 6px; z-index: 10;
+        }
+        .graph-ctrl-btn {
+            width: 38px; height: 38px; border-radius: 12px;
+            background: white; border: 1px solid #e5e7eb;
+            font-size: 18px; font-weight: 900; color: #555;
+            cursor: pointer; transition: color 0.2s, box-shadow 0.2s;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        }
+        .graph-ctrl-btn:hover { color: var(--c-red); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+
+        .graph-legend {
+            position: absolute; bottom: 20px; left: 20px;
+            background: white; border: 1px solid #efefef;
+            border-radius: 14px; padding: 12px 18px;
+            display: flex; gap: 20px; align-items: center;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+            font-size: 11px; font-weight: 700; color: #999;
+            text-transform: uppercase; letter-spacing: 0.08em;
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-dot-hub {
+            width: 14px; height: 14px; border-radius: 50%;
+            border: 2.5px solid var(--c-red); background: white;
+        }
+        .legend-dot-event {
+            width: 10px; height: 10px; border-radius: 50%;
+            background: #d1d5db;
+        }
+
+        .graph-hint {
+            position: absolute; bottom: 20px; right: 20px;
+            font-size: 10px; font-weight: 700; color: #bbb;
+            text-transform: uppercase; letter-spacing: 0.08em;
+        }
+
+        /* Detail panel */
+        #detail-panel {
+            background: white; border-radius: 2rem;
+            border: 1px solid #f0f0f0; overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.07);
+        }
+        .detail-header {
+            padding: 32px; color: white; position: relative;
+        }
+        .detail-body { padding: 28px; }
+        .detail-tag {
+            display: inline-block; padding: 6px 14px;
+            background: #f3f4f6; border-radius: 10px;
+            font-size: 11px; font-weight: 700; color: #6b7280;
+            margin: 3px;
+        }
+        .detail-stat {
+            background: #f9fafb; border-radius: 16px;
+            padding: 16px; flex: 1;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: rgba(226,23,19,0.25); border-radius: 4px; }
     </style>
 </head>
-<body class="font-sans selection:bg-red-100">
+<body>
 
-    <!-- Navigation -->
-    <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 py-4 px-8 flex justify-between items-center">
-        <div class="flex items-center gap-3">
-            <div class="w-11 h-11 bg-carnelian rounded-xl flex items-center justify-center text-white shadow-lg">
-                <svg viewBox="0 0 24 24" class="w-7 h-7 fill-current"><path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 18l-8-4V8.5l8 4 8-4V16l-8 4z"/></svg>
+<!-- ===== NAVIGATION ===== -->
+<nav id="navbar" style="padding: 18px 40px;">
+    <div style="max-width:1200px; margin:0 auto; display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:40px;height:40px;background:var(--c-red);border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(226,23,19,0.3);">
+                <svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:white;"><path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 18l-8-4V8.5l8 4 8-4V16l-8 4z"/></svg>
             </div>
-            <span class="text-2xl font-black tracking-tighter text-carnelian uppercase">Carnelian</span>
+            <span style="font-size:22px;font-weight:900;letter-spacing:-1px;color:var(--c-red);text-transform:uppercase;">Carnelian</span>
         </div>
-        <div class="hidden md:flex gap-10 font-bold text-sm uppercase tracking-widest text-gray-500">
-            <a href="#about" class="hover:text-carnelian transition-colors">Vision</a>
-            <a href="#map-section" class="hover:text-carnelian transition-colors">Network</a>
-            <a href="#events" class="hover:text-carnelian transition-colors">Portfolio</a>
-            <a href="#services" class="hover:text-carnelian transition-colors">Expertise</a>
+        <div style="display:flex;gap:36px;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.12em;">
+            <a href="#about" class="nav-link" style="color:#888;">Vision</a>
+            <a href="#map-section" class="nav-link" style="color:#888;">Network</a>
+            <a href="#events" class="nav-link" style="color:#888;">Portfolio</a>
+            <a href="#services" class="nav-link" style="color:#888;">Expertise</a>
         </div>
-        <button class="btn-primary px-7 py-2.5 rounded-full font-bold text-sm uppercase tracking-wider">Get in Touch</button>
-    </nav>
+        <a href="#" class="btn-primary" style="padding:10px 24px;border-radius:999px;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Get in Touch</a>
+    </div>
+</nav>
 
-    <!-- Hero Section -->
-    <header class="relative bg-white text-gray-900 py-32 px-8 overflow-hidden">
-        <div class="max-w-6xl mx-auto relative z-10" data-aos="fade-up">
-            <div class="inline-block px-4 py-1.5 mb-6 bg-red-50 rounded-full border border-red-100 text-carnelian text-xs font-black uppercase tracking-widest">Est. 1991</div>
-            <h1 class="text-6xl md:text-8xl font-black mb-8 leading-[0.9] tracking-tighter text-gray-900">
-                Crafting <span class="text-carnelian italic">Impactful</span><br>Connections.
+<!-- ===== HERO ===== -->
+<header style="min-height:100vh;display:flex;align-items:center;padding:120px 40px 80px;position:relative;overflow:hidden;background:#fff;">
+    <div style="max-width:1200px;margin:0 auto;width:100%;">
+        <div style="max-width:800px;" data-aos="fade-up">
+            <div class="hero-badge" style="margin-bottom:28px;">
+                <span class="hero-ping"></span>
+                Est. 1991 &nbsp;·&nbsp; Four Hubs Across Pakistan
+            </div>
+            <h1 style="font-size:clamp(60px,9vw,110px);font-weight:900;line-height:0.88;letter-spacing:-4px;color:#111;margin:0 0 28px;">
+                Crafting<br>
+                <em style="font-style:normal;color:var(--c-red);">Impactful</em><br>
+                Connections.
             </h1>
-            <p class="text-xl md:text-2xl text-gray-500 max-w-2xl mb-12 leading-relaxed">
-                Pakistan's premier Communication Consulting partner, transforming corporate landscapes through strategic training, branding, and engagement.
+            <p style="font-size:19px;color:#888;max-width:500px;line-height:1.7;font-weight:500;margin:0 0 12px;">
+                Convey Meaning. Create Significance.
             </p>
-            <div class="flex flex-wrap gap-5">
-                <a href="#events" class="btn-primary px-10 py-4 rounded-xl font-bold text-lg">Explore Portfolio</a>
-                <a href="#map-section" class="px-10 py-4 rounded-xl font-bold text-lg border-2 border-gray-200 hover:border-carnelian hover:text-carnelian transition-all">Regional Hubs</a>
-            </div>
-        </div>
-        <!-- Decorative Background Element -->
-        <div class="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-red-50 to-transparent -z-10 opacity-60"></div>
-        <div class="absolute -top-40 -right-40 w-96 h-96 bg-carnelian rounded-full opacity-5 blur-[120px]"></div>
-    </header>
-
-    <!-- About Section -->
-    <section id="about" class="py-32 px-8 max-w-6xl mx-auto">
-        <div class="grid md:grid-cols-2 gap-20 items-start">
-            <div data-aos="fade-right">
-                <h2 class="text-xs font-black text-carnelian uppercase tracking-[0.3em] mb-4">Our Legacy</h2>
-                <h3 class="text-4xl md:text-5xl font-black mb-8 leading-tight">Decades of Excellence across Pakistan</h3>
-                <p class="text-lg text-gray-500 mb-12 leading-relaxed font-medium">
-                    Since 1991, we have navigated the complexities of human factors and business realities to position Carnelian as a pioneer in communication strategy.
-                </p>
-                
-                <div class="space-y-12 border-l-2 border-gray-100 ml-3 pl-10 relative">
-                    <div class="timeline-item relative" data-aos="fade-up">
-                        <span class="block font-black text-carnelian text-2xl mb-2">1991</span>
-                        <p class="text-gray-500 font-medium">Founded with a vision to revolutionize organizational communication.</p>
-                    </div>
-                    <div class="timeline-item relative" data-aos="fade-up" data-aos-delay="100">
-                        <span class="block font-black text-carnelian text-2xl mb-2">2005</span>
-                        <p class="text-gray-500 font-medium">Strategic expansion into Islamabad, Lahore, and Karachi hubs.</p>
-                    </div>
-                    <div class="timeline-item relative" data-aos="fade-up" data-aos-delay="200">
-                        <span class="block font-black text-carnelian text-2xl mb-2">2026</span>
-                        <p class="text-gray-500 font-medium">Leading the digital-first era of stakeholder engagement and branding.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="sticky top-32" data-aos="fade-left">
-                <div class="aspect-[4/5] bg-gray-100 rounded-[3rem] overflow-hidden shadow-2xl relative border-[12px] border-white">
-                    <img src="https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&q=80&w=2074" class="w-full h-full object-cover grayscale-[0.2] hover:grayscale-0 transition-all duration-700" alt="Consulting">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                    <div class="absolute bottom-10 left-10 text-white">
-                        <div class="text-4xl font-black">35+</div>
-                        <div class="text-sm font-bold uppercase tracking-widest opacity-80">Years of Experience</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Services Section -->
-    <section id="services" class="py-32 bg-gray-900 text-white px-8">
-        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-end mb-20">
-            <div class="max-w-xl">
-                <h2 class="text-xs font-black text-carnelian uppercase tracking-[0.3em] mb-4">What we do</h2>
-                <h3 class="text-4xl md:text-5xl font-black">Holistic Consulting for the Modern Enterprise</h3>
-            </div>
-            <p class="text-gray-400 font-medium md:max-w-xs mt-6 md:mt-0">
-                Enabling clients to communicate with precision across all stakeholder levels.
+            <p style="font-size:16px;color:#aaa;max-width:480px;line-height:1.75;font-weight:400;margin:0 0 44px;">
+                Pakistan's full-service Communication Consulting partner — enabling leaders to unlock success through Learning, Coaching, Branding, Research, and Engagement since 1991.
             </p>
-        </div>
-        <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-10">
-            <!-- Service Cards -->
-            <div class="p-10 rounded-3xl bg-white/5 border border-white/10 hover:bg-carnelian transition-all duration-500 group" data-aos="fade-up">
-                <div class="text-4xl mb-8 group-hover:scale-110 transition-transform">🎓</div>
-                <h3 class="text-2xl font-black mb-6">Training & Coaching</h3>
-                <p class="text-gray-400 group-hover:text-white/80 leading-relaxed font-medium">Developing high-performance teams through behavioral leadership and tactical coaching.</p>
-            </div>
-            <div class="p-10 rounded-3xl bg-white/5 border border-white/10 hover:bg-carnelian transition-all duration-500 group" data-aos="fade-up" data-aos-delay="100">
-                <div class="text-4xl mb-8 group-hover:scale-110 transition-transform">🏷️</div>
-                <h3 class="text-2xl font-black mb-6">Branding & Strategy</h3>
-                <p class="text-gray-400 group-hover:text-white/80 leading-relaxed font-medium">Defining organizational identity that resonates with both employees and external partners.</p>
-            </div>
-            <div class="p-10 rounded-3xl bg-white/5 border border-white/10 hover:bg-carnelian transition-all duration-500 group" data-aos="fade-up" data-aos-delay="200">
-                <div class="text-4xl mb-8 group-hover:scale-110 transition-transform">📅</div>
-                <h3 class="text-2xl font-black mb-6">Event Management</h3>
-                <p class="text-gray-400 group-hover:text-white/80 leading-relaxed font-medium">Creating immersive experiences that leave lasting impressions on your diverse stakeholders.</p>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;">
+                <a href="#events" class="btn-primary" style="padding:16px 36px;border-radius:16px;font-weight:700;font-size:15px;">Explore Portfolio</a>
+                <a href="#map-section" class="btn-outline" style="padding:16px 36px;border-radius:16px;font-weight:700;font-size:15px;">Our Hubs</a>
             </div>
         </div>
-    </section>
+    </div>
+    <!-- Decorative -->
+    <div style="position:absolute;right:0;top:0;width:45%;height:100%;background:linear-gradient(to left, #fef2f1, transparent);z-index:-1;pointer-events:none;"></div>
+    <div style="position:absolute;right:-80px;top:-80px;width:480px;height:480px;border-radius:50%;background:var(--c-red);opacity:0.04;filter:blur(60px);pointer-events:none;"></div>
+    <!-- Scroll indicator -->
+    <div style="position:absolute;bottom:40px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;opacity:0.3;">
+        <span style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#555;">Scroll</span>
+        <div style="width:1px;height:48px;background:#999;animation:ping 1.5s ease-out infinite;"></div>
+    </div>
+</header>
 
-    <!-- Map Section -->
-    <section id="map-section" class="py-32 px-8 bg-white overflow-hidden">
-        <div class="max-w-6xl mx-auto mb-20 flex flex-col md:flex-row md:items-end justify-between gap-10">
-            <div class="max-w-2xl">
-                <h2 class="text-xs font-black text-carnelian uppercase tracking-[0.3em] mb-4">Regional Reach</h2>
-                <h3 class="text-4xl md:text-5xl font-black">Our Strategic Hubs</h3>
-                <p class="text-gray-500 mt-6 font-medium text-lg leading-relaxed">Located at the heart of Pakistan's economic centers, our hubs provide localized expertise with a national vision.</p>
-            </div>
-            <div class="flex gap-4">
-                <div class="bg-gray-50 border border-gray-100 px-6 py-3 rounded-2xl shadow-sm text-sm font-bold flex items-center gap-3">
-                    <span class="w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
-                    <span class="text-gray-800">Operational Excellence</span>
-                </div>
-            </div>
-        </div>
-        <div class="max-w-7xl mx-auto relative px-4">
-            <div id="map" class="shadow-[0_40px_100px_-20px_rgba(0,0,0,0.15)]"></div>
-            <!-- Stats Overlay -->
-            <div class="absolute top-10 right-14 z-[1000] glass-panel p-8 rounded-3xl shadow-2xl border border-white hidden lg:block max-w-xs">
-                <h4 class="font-black text-gray-900 text-xl mb-6">Nationwide Impact</h4>
-                <div class="space-y-6">
+<!-- ===== ABOUT ===== -->
+<section id="about" style="padding:120px 40px;">
+    <div style="max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:100px;align-items:start;">
+        <div data-aos="fade-right">
+            <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.35em;color:var(--c-red);margin-bottom:16px;">Our Legacy</div>
+            <h2 style="font-size:clamp(36px,4vw,52px);font-weight:900;letter-spacing:-2px;line-height:1.05;margin:0 0 24px;">Three Decades of Evolution</h2>
+            <p style="font-size:17px;color:#888;line-height:1.75;font-weight:500;margin:0 0 56px;">
+                Active since 1991, our firm has continuously evolved — from a learning startup to Pakistan's full-service communication consulting partner with teams across four cities.
+            </p>
+
+            <div style="display:flex;flex-direction:column;gap:36px;">
+                <div style="display:flex;gap:20px;align-items:flex-start;" data-aos="fade-up">
+                    <div class="tl-dot"></div>
                     <div>
-                        <span class="block text-4xl font-black text-carnelian">500+</span>
-                        <span class="text-xs text-gray-400 uppercase font-black tracking-widest">Global Clients</span>
+                        <div style="font-weight:900;font-size:18px;color:var(--c-red);margin-bottom:6px;">1991 — KZR Associates</div>
+                        <p style="color:#888;font-weight:500;margin:0;line-height:1.6;">Founded by Kamran Rizvi upon his return from the UK as an innovative Learning &amp; Development firm.</p>
                     </div>
-                    <div class="pt-6 border-t border-gray-100">
-                        <span class="block text-4xl font-black text-gray-900">12,000+</span>
-                        <span class="text-xs text-gray-400 uppercase font-black tracking-widest">Leaders Trained</span>
+                </div>
+                <div style="display:flex;gap:20px;align-items:flex-start;" data-aos="fade-up" data-aos-delay="100">
+                    <div class="tl-dot"></div>
+                    <div>
+                        <div style="font-weight:900;font-size:18px;color:var(--c-red);margin-bottom:6px;">2004 — Navitus</div>
+                        <p style="color:#888;font-weight:500;margin:0;line-height:1.6;">Expanded from training into full organizational development, rebranding as Navitus.</p>
+                    </div>
+                </div>
+                <div style="display:flex;gap:20px;align-items:flex-start;" data-aos="fade-up" data-aos-delay="200">
+                    <div class="tl-dot"></div>
+                    <div>
+                        <div style="font-weight:900;font-size:18px;color:var(--c-red);margin-bottom:6px;">2014 — Carnelian</div>
+                        <p style="color:#888;font-weight:500;margin:0;line-height:1.6;">Added branding, coaching, and research capabilities. Became Carnelian — a full-service partner with four hubs across Pakistan.</p>
                     </div>
                 </div>
             </div>
         </div>
-    </section>
 
-    <!-- Events Graph Section -->
-    <section id="events" class="py-32 px-8 bg-white border-t border-gray-50">
-        <div class="max-w-6xl mx-auto mb-20 text-center">
-            <h2 class="text-xs font-black text-carnelian uppercase tracking-[0.3em] mb-4">Interactive Portfolio</h2>
-            <h3 class="text-4xl md:text-6xl font-black mb-8">Exploring the Ecosystem</h3>
-            <p class="text-gray-500 max-w-2xl mx-auto font-medium text-lg">
-                Witness how our central philosophy branches into regional hubs and bespoke events. <br>
-                <span class="text-carnelian font-bold">Interact with the graph to dive deeper.</span>
+        <div style="position:sticky;top:120px;" data-aos="fade-left">
+            <div style="position:relative;">
+                <div style="border-radius:48px;overflow:hidden;border:10px solid white;box-shadow:0 40px 80px rgba(0,0,0,0.12);aspect-ratio:4/5;">
+                    <img src="https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&q=80&w=2074"
+                         style="width:100%;height:100%;object-fit:cover;display:block;" alt="Consulting">
+                    <div style="position:absolute;inset:0;background:linear-gradient(to top, rgba(0,0,0,0.55), transparent 50%);"></div>
+                    <div style="position:absolute;bottom:36px;left:36px;color:white;">
+                        <div style="font-size:52px;font-weight:900;line-height:1;">30+</div>
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;opacity:0.7;">Team Members</div>
+                    </div>
+                </div>
+                <div style="position:absolute;bottom:-24px;right:-24px;background:white;border-radius:24px;padding:24px 28px;box-shadow:0 16px 48px rgba(0,0,0,0.1);border:1px solid #f0f0f0;">
+                    <div style="font-size:32px;font-weight:900;color:var(--c-red);">500+</div>
+                    <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#aaa;margin-top:4px;">Global Clients</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== SERVICES ===== -->
+<section id="services" style="padding:120px 40px;background:var(--c-navy);">
+    <div style="max-width:1200px;margin:0 auto;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:72px;gap:40px;flex-wrap:wrap;">
+            <div>
+                <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.35em;color:var(--c-red);margin-bottom:16px;">Expertise</div>
+                <h2 style="font-size:clamp(34px,4vw,50px);font-weight:900;letter-spacing:-2px;color:white;margin:0;line-height:1.05;">Holistic Consulting<br>for Modern Enterprise</h2>
+            </div>
+            <p style="color:#888;font-weight:500;max-width:280px;line-height:1.7;margin:0;">Enabling precise communication across all stakeholder levels.</p>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;">
+            <div class="service-card" style="padding:32px;border-radius:24px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);" data-aos="fade-up"
+                onmouseover="this.style.background='var(--c-red)';this.style.borderColor='transparent'"
+                onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.borderColor='rgba(255,255,255,0.08)'">
+                <div style="font-size:36px;margin-bottom:20px;">🎓</div>
+                <h3 style="font-size:18px;font-weight:900;color:white;margin:0 0 12px;">Learning</h3>
+                <p style="color:#888;line-height:1.65;font-weight:500;margin:0;font-size:14px;">Enabling people to learn new, relevant skills and shed disempowering thoughts through skill-based trainings, cultural workshops, and team retreats.</p>
+            </div>
+            <div class="service-card" style="padding:32px;border-radius:24px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);" data-aos="fade-up" data-aos-delay="50"
+                onmouseover="this.style.background='var(--c-red)';this.style.borderColor='transparent'"
+                onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.borderColor='rgba(255,255,255,0.08)'">
+                <div style="font-size:36px;margin-bottom:20px;">🎯</div>
+                <h3 style="font-size:18px;font-weight:900;color:white;margin:0 0 12px;">Coaching</h3>
+                <p style="color:#888;line-height:1.65;font-weight:500;margin:0;font-size:14px;">Enabling individuals to craft their paths to success using renowned certifications and a pure human connect to achieve effective results.</p>
+            </div>
+            <div class="service-card" style="padding:32px;border-radius:24px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);" data-aos="fade-up" data-aos-delay="100"
+                onmouseover="this.style.background='var(--c-red)';this.style.borderColor='transparent'"
+                onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.borderColor='rgba(255,255,255,0.08)'">
+                <div style="font-size:36px;margin-bottom:20px;">✨</div>
+                <h3 style="font-size:18px;font-weight:900;color:white;margin:0 0 12px;">Branding</h3>
+                <p style="color:#888;line-height:1.65;font-weight:500;margin:0;font-size:14px;">Helping clients find their purpose and communicate it compellingly. Authentic stories that share a brand's ethos and ambitions through words and visuals.</p>
+            </div>
+            <div class="service-card" style="padding:32px;border-radius:24px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);" data-aos="fade-up" data-aos-delay="150"
+                onmouseover="this.style.background='var(--c-red)';this.style.borderColor='transparent'"
+                onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.borderColor='rgba(255,255,255,0.08)'">
+                <div style="font-size:36px;margin-bottom:20px;">🔬</div>
+                <h3 style="font-size:18px;font-weight:900;color:white;margin:0 0 12px;">Research</h3>
+                <p style="color:#888;line-height:1.65;font-weight:500;margin:0;font-size:14px;">Enabling smart decision making by bringing out the stories hiding in data and statistics through a communication-first lens.</p>
+            </div>
+            <div class="service-card" style="padding:32px;border-radius:24px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);" data-aos="fade-up" data-aos-delay="200"
+                onmouseover="this.style.background='var(--c-red)';this.style.borderColor='transparent'"
+                onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.borderColor='rgba(255,255,255,0.08)'">
+                <div style="font-size:36px;margin-bottom:20px;">👥</div>
+                <h3 style="font-size:18px;font-weight:900;color:white;margin:0 0 12px;">HR Consulting</h3>
+                <p style="color:#888;line-height:1.65;font-weight:500;margin:0;font-size:14px;">Partnering with clients to identify gaps between current realities and desired results — needs assessments, org scans, and vision mapping.</p>
+            </div>
+            <div class="service-card" style="padding:32px;border-radius:24px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);" data-aos="fade-up" data-aos-delay="250"
+                onmouseover="this.style.background='var(--c-red)';this.style.borderColor='transparent'"
+                onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.borderColor='rgba(255,255,255,0.08)'">
+                <div style="font-size:36px;margin-bottom:20px;">📣</div>
+                <h3 style="font-size:18px;font-weight:900;color:white;margin:0 0 12px;">Customer Engagement</h3>
+                <p style="color:#888;line-height:1.65;font-weight:500;margin:0;font-size:14px;">Connecting with diverse audiences to convey meaningful ideas through storytelling, activations, and active participation strategies.</p>
+            </div>
+            <div class="service-card" style="padding:32px;border-radius:24px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);" data-aos="fade-up" data-aos-delay="300"
+                onmouseover="this.style.background='var(--c-red)';this.style.borderColor='transparent'"
+                onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.borderColor='rgba(255,255,255,0.08)'">
+                <div style="font-size:36px;margin-bottom:20px;">📅</div>
+                <h3 style="font-size:18px;font-weight:900;color:white;margin:0 0 12px;">Events</h3>
+                <p style="color:#888;line-height:1.65;font-weight:500;margin:0;font-size:14px;">Designing and executing immersive events that leave lasting impressions on diverse stakeholder communities across Pakistan.</p>
+            </div>
+            <div class="service-card" style="padding:32px;border-radius:24px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);" data-aos="fade-up" data-aos-delay="350"
+                onmouseover="this.style.background='var(--c-red)';this.style.borderColor='transparent'"
+                onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.borderColor='rgba(255,255,255,0.08)'">
+                <div style="font-size:36px;margin-bottom:20px;">🧠</div>
+                <h3 style="font-size:18px;font-weight:900;color:white;margin:0 0 12px;">Psychometric Assessments</h3>
+                <p style="color:#888;line-height:1.65;font-weight:500;margin:0;font-size:14px;">Internationally certified EQi 2.0 assessments in partnership with MHS Global — measuring and developing Emotional Intelligence.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== MAP ===== -->
+<section id="map-section" style="padding:120px 40px;background:white;">
+    <div style="max-width:1200px;margin:0 auto;">
+        <div style="margin-bottom:20px;">
+            <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.35em;color:var(--c-red);margin-bottom:16px;">Regional Reach</div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:40px;flex-wrap:wrap;margin-bottom:32px;">
+                <h2 style="font-size:clamp(34px,4vw,50px);font-weight:900;letter-spacing:-2px;margin:0;">Our Strategic Hubs</h2>
+                <p style="color:#888;font-weight:500;max-width:320px;margin:0;line-height:1.6;">Click any marker or pill to fly to a hub and explore local leadership.</p>
+            </div>
+            <!-- Hub pills -->
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button onclick="flyToHub('multan')" class="hub-pill" style="padding:10px 22px;border-radius:999px;border:2px solid #e5e7eb;background:white;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;transition:all 0.2s;color:var(--c-navy);"
+                    onmouseover="this.style.borderColor='var(--c-red)';this.style.color='var(--c-red)';"
+                    onmouseout="this.style.borderColor='#e5e7eb';this.style.color='var(--c-navy)';">
+                    Multan HQ
+                </button>
+                <button onclick="flyToHub('karachi')" class="hub-pill" style="padding:10px 22px;border-radius:999px;border:2px solid #e5e7eb;background:white;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;transition:all 0.2s;color:var(--c-navy);"
+                    onmouseover="this.style.borderColor='var(--c-red)';this.style.color='var(--c-red)';"
+                    onmouseout="this.style.borderColor='#e5e7eb';this.style.color='var(--c-navy)';">
+                    Karachi
+                </button>
+                <button onclick="flyToHub('lahore')" class="hub-pill" style="padding:10px 22px;border-radius:999px;border:2px solid #e5e7eb;background:white;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;transition:all 0.2s;color:var(--c-navy);"
+                    onmouseover="this.style.borderColor='var(--c-red)';this.style.color='var(--c-red)';"
+                    onmouseout="this.style.borderColor='#e5e7eb';this.style.color='var(--c-navy)';">
+                    Lahore
+                </button>
+                <button onclick="flyToHub('islamabad')" class="hub-pill" style="padding:10px 22px;border-radius:999px;border:2px solid #e5e7eb;background:white;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;transition:all 0.2s;color:var(--c-navy);"
+                    onmouseover="this.style.borderColor='var(--c-red)';this.style.color='var(--c-red)';"
+                    onmouseout="this.style.borderColor='#e5e7eb';this.style.color='var(--c-navy)';">
+                    Islamabad
+                </button>
+                <button onclick="resetMap()" class="hub-pill" style="padding:10px 22px;border-radius:999px;border:2px solid #e5e7eb;background:white;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;transition:all 0.2s;color:var(--c-navy);"
+                    onmouseover="this.style.borderColor='var(--c-red)';this.style.color='var(--c-red)';"
+                    onmouseout="this.style.borderColor='#e5e7eb';this.style.color='var(--c-navy)';">
+                    All Hubs
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div style="max-width:1400px;margin:0 auto;position:relative;border-radius:2rem;overflow:hidden;box-shadow:0 40px 100px rgba(0,0,0,0.09);">
+        <div id="map"></div>
+        <!-- Map side panel -->
+        <div id="map-panel">
+            <div id="map-panel-inner" style="display:flex;flex-direction:column;height:100%;overflow:hidden;"></div>
+        </div>
+        <!-- Stats overlay -->
+        <div style="position:absolute;top:20px;left:20px;z-index:999;background:white;border-radius:20px;padding:20px 24px;box-shadow:0 8px 32px rgba(0,0,0,0.1);">
+            <div style="font-size:30px;font-weight:900;color:var(--c-red);">4</div>
+            <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#aaa;">Active Hubs</div>
+            <div style="margin-top:16px;padding-top:16px;border-top:1px solid #f0f0f0;">
+                <div style="font-size:30px;font-weight:900;color:var(--c-navy);">30+</div>
+                <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#aaa;">Team Members</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== EVENTS GRAPH ===== -->
+<section id="events" style="padding:120px 40px;background:#f7f7f7;">
+    <div style="max-width:1300px;margin:0 auto;">
+        <div style="text-align:center;margin-bottom:64px;" data-aos="fade-up">
+            <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.35em;color:var(--c-red);margin-bottom:16px;">Interactive Portfolio</div>
+            <h2 style="font-size:clamp(38px,5vw,64px);font-weight:900;letter-spacing:-3px;margin:0 0 20px;line-height:0.95;">The Carnelian<br>Ecosystem</h2>
+            <p style="color:#888;font-weight:500;font-size:17px;line-height:1.7;margin:0 auto;max-width:460px;">
+                Our central philosophy branches into regional hubs and bespoke projects.<br>
+                <strong style="color:var(--c-red);">Click hubs to expand events — drag to explore.</strong>
             </p>
         </div>
-        <div class="max-w-[1400px] mx-auto">
-            <div class="grid lg:grid-cols-4 gap-12 items-start">
-                <div class="lg:col-span-3">
-                    <div id="network" class="shadow-inner border border-gray-100"></div>
+
+        <div style="display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start;">
+            <!-- Graph -->
+            <div id="graph-container">
+                <svg id="graph-svg"></svg>
+                <div class="graph-controls">
+                    <button class="graph-ctrl-btn" id="ctrl-zoom-in">+</button>
+                    <button class="graph-ctrl-btn" id="ctrl-zoom-out">−</button>
+                    <button class="graph-ctrl-btn" id="ctrl-fit" style="font-size:14px;">⊞</button>
                 </div>
-                <div class="lg:sticky lg:top-32 glass-panel rounded-[2rem] p-10 border border-red-50 shadow-xl" id="node-details">
-                    <div id="detail-placeholder">
-                        <div class="w-16 h-16 bg-red-50 text-carnelian rounded-2xl flex items-center justify-center text-3xl mb-8 font-black">?</div>
-                        <h3 class="text-2xl font-black text-gray-900 mb-6 tracking-tight">Ecosystem Details</h3>
-                        <p class="text-gray-400 font-medium leading-relaxed italic">Select a hub or event node in the graph to explore our strategic impact.</p>
+                <div class="graph-legend">
+                    <div class="legend-item">
+                        <div class="legend-dot-hub"></div>
+                        <span>Hub Office</span>
                     </div>
-                    <div id="detail-content" class="hidden"></div>
+                    <div class="legend-item">
+                        <div class="legend-dot-event"></div>
+                        <span>Event</span>
+                    </div>
                 </div>
+                <div class="graph-hint">Scroll to zoom &nbsp;·&nbsp; Drag to pan</div>
+            </div>
+
+            <!-- Detail panel -->
+            <div id="detail-panel" style="position:sticky;top:100px;">
+                <div id="detail-placeholder" style="padding:36px;">
+                    <div style="width:56px;height:56px;border-radius:18px;background:#fef2f1;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:24px;">🔍</div>
+                    <h3 style="font-size:22px;font-weight:900;margin:0 0 12px;letter-spacing:-0.5px;">Explore Nodes</h3>
+                    <p style="color:#aaa;font-weight:500;line-height:1.7;margin:0 0 28px;font-size:14px;">Click the <strong style="color:var(--c-navy);">Carnelian</strong> center, any <strong style="color:var(--c-navy);">hub city</strong>, or an <strong style="color:var(--c-navy);">event node</strong> to see details.</p>
+                    <div style="background:#f9fafb;border-radius:16px;padding:18px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#bbb;line-height:2.2;">
+                        <div>→ Click hub to expand events</div>
+                        <div>→ Drag nodes to reposition</div>
+                        <div>→ Scroll to zoom in/out</div>
+                    </div>
+                </div>
+                <div id="detail-content" style="display:none;"></div>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
-    <!-- Footer -->
-    <footer class="bg-gray-900 text-white py-24 px-8 border-t border-white/5">
-        <div class="max-w-6xl mx-auto grid md:grid-cols-4 gap-20">
-            <div class="md:col-span-2">
-                <div class="flex items-center gap-3 mb-10">
-                    <div class="w-11 h-11 bg-carnelian rounded-xl flex items-center justify-center text-white">
-                        <svg viewBox="0 0 24 24" class="w-7 h-7 fill-current"><path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 18l-8-4V8.5l8 4 8-4V16l-8 4z"/></svg>
+<!-- ===== FOOTER ===== -->
+<footer style="background:var(--c-navy);color:white;padding:96px 40px 40px;">
+    <div style="max-width:1200px;margin:0 auto;">
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:64px;margin-bottom:64px;">
+            <div>
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:28px;">
+                    <div style="width:40px;height:40px;background:var(--c-red);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                        <svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:white;"><path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 18l-8-4V8.5l8 4 8-4V16l-8 4z"/></svg>
                     </div>
-                    <span class="text-2xl font-black tracking-tighter uppercase">Carnelian</span>
+                    <span style="font-size:20px;font-weight:900;letter-spacing:-1px;text-transform:uppercase;">Carnelian</span>
                 </div>
-                <p class="text-gray-400 max-w-sm text-lg leading-relaxed font-medium">
-                    Redefining corporate communication since 1991. Your full-service partner for training, coaching, and strategic branding.
-                </p>
+                <p style="color:#888;line-height:1.7;font-weight:500;max-width:300px;font-size:15px;margin:0;">Redefining corporate communication since 1991. Full-service partner for training, coaching, and strategic branding.</p>
             </div>
             <div>
-                <h4 class="font-black text-sm uppercase tracking-[0.3em] mb-10 text-carnelian">Explore</h4>
-                <ul class="space-y-6 text-gray-400 font-bold uppercase text-xs tracking-widest">
-                    <li><a href="#" class="hover:text-white transition-colors">Case Studies</a></li>
-                    <li><a href="#about" class="hover:text-white transition-colors">Our Vision</a></li>
-                    <li><a href="#map-section" class="hover:text-white transition-colors">Global Network</a></li>
-                    <li><a href="#services" class="hover:text-white transition-colors">Expertise</a></li>
-                </ul>
+                <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.3em;color:var(--c-red);margin-bottom:28px;">Explore</div>
+                <div style="display:flex;flex-direction:column;gap:16px;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.12em;">
+                    <a href="#about" style="color:#888;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='#888'">Vision</a>
+                    <a href="#map-section" style="color:#888;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='#888'">Network</a>
+                    <a href="#events" style="color:#888;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='#888'">Portfolio</a>
+                    <a href="#services" style="color:#888;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='#888'">Expertise</a>
+                </div>
             </div>
             <div>
-                <h4 class="font-black text-sm uppercase tracking-[0.3em] mb-10 text-carnelian">Contact</h4>
-                <p class="text-white font-black text-lg mb-4">info@carnelian.com.pk</p>
-                <p class="text-gray-400 font-medium">+92 (21) 111-222-333</p>
-                <div class="flex gap-6 mt-12">
-                    <a href="#" class="text-gray-500 hover:text-white transition-colors text-2xl font-black italic">in</a>
-                    <a href="#" class="text-gray-500 hover:text-white transition-colors text-2xl font-black italic">f</a>
-                    <a href="#" class="text-gray-500 hover:text-white transition-colors text-2xl font-black italic">t</a>
+                <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.3em;color:var(--c-red);margin-bottom:28px;">Contact</div>
+                <p style="color:white;font-weight:900;font-size:16px;margin:0 0 8px;">careers@carnelianco.com</p>
+                <p style="color:#888;font-weight:500;margin:0 4px;">KHI: +92 300 240 6207</p>
+                <p style="color:#888;font-weight:500;margin:0 0 28px;">ISB: +92 51 835 7496</p>
+                <div style="display:flex;gap:10px;">
+                    <a href="https://linkedin.com/company/3843316" target="_blank" style="width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;color:#888;text-decoration:none;font-weight:900;font-size:13px;transition:all 0.2s;" onmouseover="this.style.color='white';this.style.borderColor='rgba(255,255,255,0.3)'" onmouseout="this.style.color='#888';this.style.borderColor='rgba(255,255,255,0.1)'">in</a>
+                    <a href="https://facebook.com/carnelianco" target="_blank" style="width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;color:#888;text-decoration:none;font-weight:900;font-size:13px;transition:all 0.2s;" onmouseover="this.style.color='white';this.style.borderColor='rgba(255,255,255,0.3)'" onmouseout="this.style.color='#888';this.style.borderColor='rgba(255,255,255,0.1)'">f</a>
+                    <a href="https://instagram.com/carnelianco" target="_blank" style="width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;color:#888;text-decoration:none;font-weight:900;font-size:13px;transition:all 0.2s;" onmouseover="this.style.color='white';this.style.borderColor='rgba(255,255,255,0.3)'" onmouseout="this.style.color='#888';this.style.borderColor='rgba(255,255,255,0.1)'">ig</a>
                 </div>
             </div>
         </div>
-        <div class="max-w-6xl mx-auto border-t border-white/5 mt-20 pt-10 flex flex-col md:flex-row justify-between items-center gap-6">
-            <p class="text-gray-500 text-sm font-bold tracking-widest uppercase">© 2026 Carnelian. Excellence in Motion.</p>
-            <div class="flex gap-8 text-xs font-black uppercase tracking-widest text-gray-500">
-                <a href="#" class="hover:text-white">Privacy</a>
-                <a href="#" class="hover:text-white">Terms</a>
+        <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:28px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+            <p style="color:#555;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;margin:0;">© 2026 Carnelian. Excellence in Motion.</p>
+            <div style="display:flex;gap:20px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.12em;">
+                <a href="#" style="color:#555;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='#555'">Privacy</a>
+                <a href="#" style="color:#555;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='#555'">Terms</a>
             </div>
         </div>
-    </footer>
+    </div>
+</footer>
 
-    <script>
-        // Initialize AOS
-        AOS.init({
-            duration: 1000,
-            once: true,
-            easing: 'ease-out-cubic'
-        });
+<script>
+// ============================================================
+// AOS + NAV SCROLL
+// ============================================================
+AOS.init({ duration: 900, once: true, easing: 'ease-out-cubic' });
 
-        // Map Implementation (using palette colors)
-        var map = L.map('map', {
-            scrollWheelZoom: false,
-            zoomControl: false
-        }).setView([30.3753, 69.3451], 5);
+const navbar = document.getElementById('navbar');
+window.addEventListener('scroll', () => {
+    navbar.classList.toggle('scrolled', window.scrollY > 40);
+});
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '©OpenStreetMap'
-        }).addTo(map);
+// ============================================================
+// MAP
+// ============================================================
+const hubData = {
+    multan: {
+        name: 'Multan HQ', lat: 30.1984, lng: 71.4688,
+        lead: 'Kamran Z. Rizvi', role: 'Founder & Principal Consultant',
+        clients: 180, specialty: 'Learning, Coaching & Psychometrics', since: '1991',
+        avatar: 'https://i.pravatar.cc/150?u=kamran_rizvi',
+        color: '#e32000',
+        team: ['Kamran Z. Rizvi', 'Shireen Naqvi', 'Fakiha Imran', 'Muhammad Saleh'],
+        events: ['Train the Trainer (Mar 2022)', 'EQi 2.0 Assessments', 'Org Transformation']
+    },
+    karachi: {
+        name: 'Karachi Hub', lat: 24.8607, lng: 67.0011,
+        lead: 'Waleed Anwar', role: 'Consultant',
+        clients: 120, specialty: 'Customer Engagement & Learning', since: '2005',
+        avatar: 'https://i.pravatar.cc/150?u=waleed_anwar',
+        color: '#840305',
+        team: ['Waleed Anwar', 'Minahil Gillani'],
+        events: ['Shell Super Star', 'Nido Mission Nutrition', 'PTCL Project Transform']
+    },
+    lahore: {
+        name: 'Lahore Hub', lat: 31.5204, lng: 74.3587,
+        lead: 'Asif Khan', role: 'Branding Consultant',
+        clients: 90, specialty: 'Branding & Identity', since: '2005',
+        avatar: 'https://i.pravatar.cc/150?u=asif_khan_lhe',
+        color: '#702830',
+        team: ['Asif Khan'],
+        events: ['Crescent Hadeed Branding', 'Identity Workshops', 'Brand Strategy Engagements']
+    },
+    islamabad: {
+        name: 'Islamabad Hub', lat: 33.6844, lng: 73.0479,
+        lead: 'Carnelian Team', role: 'Consulting & Training',
+        clients: 75, specialty: 'Government & Public Sector', since: '2007',
+        avatar: 'https://i.pravatar.cc/150?u=carnelian_isb',
+        color: '#34314d',
+        team: ['Consulting Team'],
+        events: ['Together for Tolerance', 'Public Sector Training', 'Leadership Coaching']
+    }
+};
 
-        const hubs = [
-            { name: "Karachi Hub", lat: 24.8607, lng: 67.0011, lead: "Ahsan Iqbal", clients: 150, img: "https://i.pravatar.cc/150?u=ahsan" },
-            { name: "Lahore Hub", lat: 31.5204, lng: 74.3587, lead: "Sarah Ahmed", clients: 120, img: "https://i.pravatar.cc/150?u=sarah" },
-            { name: "Islamabad Hub", lat: 33.6844, lng: 73.0479, lead: "Zohaib Khan", clients: 90, img: "https://i.pravatar.cc/150?u=zohaib" }
-        ];
+const map = L.map('map', { scrollWheelZoom: false, touchZoom: true, zoomControl: false })
+    .setView([29.5, 70.5], 5);
 
-        hubs.forEach(hub => {
-            const popupContent = `
-                <div class="custom-popup font-sans">
-                    <div class="bg-[#e21713] p-5 text-white">
-                        <h3 class="font-black text-xl tracking-tight">${hub.name}</h3>
-                        <p class="text-xs font-bold uppercase tracking-widest opacity-80">Regional Lead Hub</p>
-                    </div>
-                    <div class="p-6 flex gap-5 items-center bg-white">
-                        <img src="${hub.img}" class="w-14 h-14 rounded-2xl border-2 border-red-50 shadow-md" alt="${hub.lead}">
-                        <div>
-                            <p class="font-black text-gray-900 text-lg leading-tight">${hub.lead}</p>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Strategic Director</p>
-                        </div>
-                    </div>
-                    <div class="px-6 pb-6 bg-white">
-                        <div class="p-4 bg-gray-50 rounded-2xl flex justify-between items-center border border-gray-100">
-                            <span class="text-xs font-black text-gray-400 uppercase tracking-widest">Outreach</span>
-                            <span class="font-black text-[#e21713] text-lg">${hub.clients}+ Clients</span>
-                        </div>
-                        <button class="w-full mt-4 bg-[#35314e] text-white font-black py-3 rounded-xl text-xs uppercase tracking-[0.2em] hover:bg-[#e21713] transition-all">Connect Hub</button>
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap contributors'
+}).addTo(map);
+
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+function createHubIcon() {
+    return L.divIcon({
+        className: '',
+        html: `<div style="position:relative;width:56px;height:56px;cursor:pointer">
+            <div style="position:absolute;inset:0;border-radius:50%;background:rgba(226,23,19,0.18);animation:pulse-ring 2s ease-out infinite"></div>
+            <div style="position:absolute;inset:0;border-radius:50%;background:rgba(226,23,19,0.1);animation:pulse-ring 2s ease-out infinite;animation-delay:0.7s"></div>
+            <div style="position:absolute;inset:12px;background:#e32000;border-radius:50%;border:3px solid white;box-shadow:0 4px 20px rgba(226,23,19,0.4);z-index:10"></div>
+        </div>`,
+        iconSize: [56, 56],
+        iconAnchor: [28, 28],
+        popupAnchor: [0, -32]
+    });
+}
+
+Object.entries(hubData).forEach(([key, hub]) => {
+    const marker = L.marker([hub.lat, hub.lng], { icon: createHubIcon() }).addTo(map);
+    marker.on('click', () => openMapPanel(key));
+});
+
+function openMapPanel(key) {
+    const hub = hubData[key];
+    const panel = document.getElementById('map-panel');
+    const inner = document.getElementById('map-panel-inner');
+
+    inner.innerHTML = `
+        <div style="background:${hub.color};padding:28px 24px;color:white;position:relative;flex-shrink:0;">
+            <button onclick="closeMapPanel()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(255,255,255,0.6);font-size:22px;font-weight:900;cursor:pointer;line-height:1;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.6)'">×</button>
+            <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.25em;opacity:0.65;margin-bottom:6px;">Regional Hub</div>
+            <h3 style="font-size:22px;font-weight:900;letter-spacing:-0.5px;margin:0 0 4px;">${hub.name}</h3>
+            <div style="font-size:13px;opacity:0.65;font-weight:500;">${hub.specialty}</div>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:24px;">
+            <div style="padding:16px;background:#f9fafb;border-radius:16px;margin-bottom:20px;">
+                <div style="display:flex;align-items:center;gap:14px;margin-bottom:${hub.team.length > 1 ? '12px' : '0'};">
+                    <img src="${hub.avatar}" style="width:48px;height:48px;border-radius:12px;border:2px solid white;box-shadow:0 4px 12px rgba(0,0,0,0.1);flex-shrink:0;" alt="${hub.lead}">
+                    <div>
+                        <div style="font-weight:900;font-size:15px;color:#111;line-height:1.2;">${hub.lead}</div>
+                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#aaa;margin-top:3px;">${hub.role}</div>
                     </div>
                 </div>
-            `;
-            
-            const marker = L.circleMarker([hub.lat, hub.lng], {
-                radius: 12,
-                fillColor: "#e21713",
-                color: "#fff",
-                weight: 4,
-                opacity: 1,
-                fillOpacity: 1
-            }).addTo(map).bindPopup(popupContent);
-        });
-
-        // --- CONCEPTUAL D3.JS GRAPH IMPLEMENTATION (V4.1) ---
-        
-        const allNodes = [
-            { id: 0, label: 'CARNELIAN', type: 'center', size: 100 },
-            { id: 'h1', label: 'Karachi', type: 'hub', expanded: false, img: 'https://images.unsplash.com/photo-1563911302283-d2bc129e7570?auto=format&fit=crop&q=80&w=1000' },
-            { id: 'h2', label: 'Lahore', type: 'hub', expanded: false, img: 'https://images.unsplash.com/photo-1596464716127-f2a82984de30?auto=format&fit=crop&q=80&w=1000' },
-            { id: 'h3', label: 'Islamabad', type: 'hub', expanded: false, img: 'https://images.unsplash.com/photo-1622546758296-482202744a67?auto=format&fit=crop&q=80&w=1000' },
-            { id: 1, label: 'Strategy Summit', type: 'event', hub: 'h1' },
-            { id: 4, label: 'Team Retreat', type: 'event', hub: 'h1' },
-            { id: 3, label: 'Identity Workshop', type: 'event', hub: 'h2' },
-            { id: 5, label: 'CX Expo', type: 'event', hub: 'h2' },
-            { id: 2, label: 'Leadership Coaching', type: 'event', hub: 'h3' },
-            { id: 6, label: 'Branding Seminar', type: 'event', hub: 'h3' }
-        ];
-
-        const allLinks = [
-            { source: 0, target: 'h1', label: 'KARACHI SECTOR' },
-            { source: 0, target: 'h2', label: 'LAHORE SECTOR' },
-            { source: 0, target: 'h3', label: 'ISLAMABAD SECTOR' },
-            { source: 'h1', target: 1 }, { source: 'h1', target: 4 },
-            { source: 'h2', target: 3 }, { source: 'h2', target: 5 },
-            { source: 'h3', target: 2 }, { source: 'h3', target: 6 }
-        ];
-
-        let currentNodes = allNodes.filter(n => n.type !== 'event');
-        let currentLinks = allLinks.filter(l => typeof l.source === 'object' ? l.source.type !== 'event' : !allNodes.find(n => n.id === l.target && n.type === 'event'));
-
-        const width = document.getElementById('network').clientWidth;
-        const height = document.getElementById('network').clientHeight;
-
-        const svg = d3.select("#network")
-            .append("svg")
-            .attr("width", "100%")
-            .attr("height", "100%")
-            .attr("viewBox", [0, 0, width, height]);
-
-        const g = svg.append("g");
-
-        // Zoom Behavior
-        const zoom = d3.zoom()
-            .scaleExtent([0.1, 3])
-            .on("zoom", (event) => {
-                g.attr("transform", event.transform);
-            });
-
-        svg.call(zoom);
-
-        // Simulation
-        const simulation = d3.forceSimulation(currentNodes)
-            .force("link", d3.forceLink(currentLinks).id(d => d.id).distance(d => d.source.type === 'center' ? 300 : 100))
-            .force("charge", d3.forceManyBody().strength(-1200))
-            .force("center", d3.forceCenter(width / 2, height / 2))
-            .force("collide", d3.forceCollide().radius(80));
-
-        // Define ClipPaths (Fixed coordinates)
-        const defs = svg.append("defs");
-
-        function updateGraph() {
-            // Update ClipPaths
-            const hubNodes = currentNodes.filter(n => n.type === 'hub');
-            const clipPaths = defs.selectAll("clipPath")
-                .data(hubNodes, d => d.id);
-
-            clipPaths.exit().remove();
-            
-            clipPaths.enter().append("clipPath")
-                .attr("id", d => `clip-${d.id}`)
-                .append("rect")
-                .attr("x", -50)
-                .attr("y", -80)
-                .attr("width", 100)
-                .attr("height", 160)
-                .attr("rx", 40)
-                .attr("ry", 40);
-
-            // Links
-            const link = g.selectAll(".link")
-                .data(currentLinks, d => `${d.source.id || d.source}-${d.target.id || d.target}`);
-
-            link.exit().remove();
-
-            const linkEnter = link.enter().append("path")
-                .attr("class", "link")
-                .attr("id", (d, i) => `link-${d.source.id || d.source}-${d.target.id || d.target}`)
-                .attr("stroke", d => {
-                    const src = typeof d.source === 'object' ? d.source : allNodes.find(n => n.id === d.source);
-                    return src.type === 'center' ? "rgba(226, 23, 19, 0.15)" : "rgba(53, 49, 78, 0.1)";
-                })
-                .attr("stroke-width", d => {
-                    const src = typeof d.source === 'object' ? d.source : allNodes.find(n => n.id === d.source);
-                    return src.type === 'center' ? 8 : 2;
-                })
-                .attr("fill", "none")
-                .style("cursor", d => {
-                    const src = typeof d.source === 'object' ? d.source : allNodes.find(n => n.id === d.source);
-                    return src.type === 'center' ? "pointer" : "default";
-                });
-
-            // Link Labels
-            const labels = g.selectAll(".edge-label")
-                .data(currentLinks.filter(l => l.label), d => `${d.source.id || d.source}-${d.target.id || d.target}`);
-
-            labels.exit().remove();
-
-            labels.enter().append("text")
-                .attr("class", "edge-label")
-                .append("textPath")
-                .attr("xlink:href", d => `#link-${d.source.id || d.source}-${d.target.id || d.target}`)
-                .attr("startOffset", "50%")
-                .attr("text-anchor", "middle")
-                .style("font-size", "10px")
-                .style("font-weight", "900")
-                .style("fill", "#ce6e61")
-                .style("text-transform", "uppercase")
-                .style("letter-spacing", "2px")
-                .text(d => d.label);
-
-            // Nodes
-            const node = g.selectAll(".node-group")
-                .data(currentNodes, d => d.id);
-
-            node.exit().remove();
-
-            const nodeEnter = node.enter().append("g")
-                .attr("class", d => `node-group node-${d.type}`)
-                .on("click", (event, d) => {
-                    if (d.type === 'hub') toggleHub(event, d);
-                    handleNodeClick(event, d);
-                })
-                .call(d3.drag()
-                    .on("start", dragstarted)
-                    .on("drag", dragged)
-                    .on("end", dragended));
-
-            // Center Node
-            nodeEnter.filter(d => d.type === 'center')
-                .append("text")
-                .attr("text-anchor", "middle")
-                .attr("dy", ".35em")
-                .style("font-family", "Arial Black, sans-serif")
-                .style("font-size", "64px")
-                .style("font-weight", "950")
-                .style("fill", "var(--c-red-bright)")
-                .text(d => d.label);
-
-            // Hub Nodes
-            const hubsEnter = nodeEnter.filter(d => d.type === 'hub');
-            
-            hubsEnter.append("rect")
-                .attr("x", -50)
-                .attr("y", -80)
-                .attr("width", 100)
-                .attr("height", 160)
-                .attr("rx", 40)
-                .attr("ry", 40)
-                .attr("fill", "var(--c-cream)")
-                .attr("stroke", "var(--c-red-bright)")
-                .attr("stroke-width", 4);
-
-            hubsEnter.append("image")
-                .attr("xlink:href", d => d.img)
-                .attr("x", -50)
-                .attr("y", -80)
-                .attr("width", 100)
-                .attr("height", 160)
-                .attr("clip-path", d => `url(#clip-${d.id})`)
-                .attr("preserveAspectRatio", "xMidYMid slice");
-
-            hubsEnter.append("rect")
-                .attr("x", -50)
-                .attr("y", 30)
-                .attr("width", 100)
-                .attr("height", 50)
-                .attr("rx", 10)
-                .attr("fill", "rgba(255,255,255,0.95)");
-
-            hubsEnter.append("text")
-                .attr("text-anchor", "middle")
-                .attr("y", 60)
-                .style("font-weight", "900")
-                .style("font-size", "12px")
-                .style("text-transform", "uppercase")
-                .style("fill", "var(--c-dark-navy)")
-                .text(d => d.label);
-
-            // Event Nodes
-            const eventsEnter = nodeEnter.filter(d => d.type === 'event');
-            
-            eventsEnter.append("circle")
-                .attr("r", 10)
-                .attr("fill", "#fff")
-                .attr("stroke", "var(--c-red-bright)")
-                .attr("stroke-width", 3)
-                .style("filter", "drop-shadow(0 4px 6px rgba(0,0,0,0.1))");
-
-            eventsEnter.append("text")
-                .attr("text-anchor", "middle")
-                .attr("y", 25)
-                .style("font-size", "10px")
-                .style("font-weight", "bold")
-                .style("fill", "var(--c-dark-navy)")
-                .text(d => d.label);
-
-            simulation.nodes(currentNodes);
-            simulation.force("link").links(currentLinks);
-            simulation.alpha(1).restart();
-        }
-
-        function toggleHub(event, hub) {
-            event.stopPropagation();
-            hub.expanded = !hub.expanded;
-            
-            if (hub.expanded) {
-                const newNodes = allNodes.filter(n => n.hub === hub.id);
-                const newLinks = allLinks.filter(l => l.source === hub.id || (typeof l.source === 'object' && l.source.id === hub.id));
-                currentNodes.push(...newNodes);
-                currentLinks.push(...newLinks);
-                zoomToCluster(hub.id);
-            } else {
-                currentNodes = currentNodes.filter(n => n.hub !== hub.id);
-                currentLinks = currentLinks.filter(l => {
-                    const srcId = l.source.id || l.source;
-                    const tgtId = l.target.id || l.target;
-                    return allNodes.find(n => n.id === srcId).hub !== hub.id && allNodes.find(n => n.id === tgtId).hub !== hub.id;
-                });
-                fitGraph();
-            }
-            updateGraph();
-        }
-
-        // Physics Ticking
-        simulation.on("tick", () => {
-            g.selectAll(".link").attr("d", d => {
-                const dx = d.target.x - d.source.x,
-                      dy = d.target.y - d.source.y,
-                      dr = Math.sqrt(dx * dx + dy * dy);
-                return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
-            });
-
-            g.selectAll(".node-group").attr("transform", d => `translate(${d.x},${d.y})`);
-        });
-
-        updateGraph();
-        
-        // Initial Fit
-        setTimeout(fitGraph, 500);
-
-        function fitGraph() {
-            const bounds = g.node().getBBox();
-            if (bounds.width === 0) return;
-            
-            const fullWidth = width;
-            const fullHeight = height;
-            const widthScale = (fullWidth - 150) / bounds.width;
-            const heightScale = (fullHeight - 150) / bounds.height;
-            const scale = Math.min(widthScale, heightScale, 0.8);
-            
-            const midX = bounds.x + bounds.width / 2;
-            const midY = bounds.y + bounds.height / 2;
-
-            const t = d3.zoomIdentity
-                .translate(fullWidth / 2 - scale * midX, fullHeight / 2 - scale * midY)
-                .scale(scale);
-
-            svg.transition().duration(1200).call(zoom.transform, t);
-            zoom.scaleExtent([scale * 0.5, 3]);
-        }
-
-        function zoomToCluster(hubId) {
-            const nodesInCluster = currentNodes.filter(n => n.id === hubId || n.hub === hubId);
-            const xExtent = d3.extent(nodesInCluster, d => d.x);
-            const yExtent = d3.extent(nodesInCluster, d => d.y);
-            
-            const clusterWidth = xExtent[1] - xExtent[0] + 300;
-            const clusterHeight = yExtent[1] - yExtent[0] + 300;
-            const midX = (xExtent[0] + xExtent[1]) / 2;
-            const midY = (yExtent[0] + yExtent[1]) / 2;
-            
-            const scale = Math.min(width / clusterWidth, height / clusterHeight, 1.2);
-            const t = d3.zoomIdentity
-                .translate(width / 2 - scale * midX, height / 2 - scale * midY)
-                .scale(scale);
-
-            svg.transition().duration(1000).ease(d3.easeCubicInOut).call(zoom.transform, t);
-        }
-
-        const entityDetails = {
-            'h1': { title: "Karachi Hub", type: "Regional Hub", desc: "Leading the financial and commercial heart of Pakistan with high-impact corporate summits.", tags: ["Financial Center", "Hub"], img: 'https://images.unsplash.com/photo-1563911302283-d2bc129e7570?auto=format&fit=crop&q=80&w=1000' },
-            'h2': { title: "Lahore Hub", type: "Regional Hub", desc: "Our cultural and branding nerve center, driving creative excellence and consumer engagement.", tags: ["Cultural Hub", "Design"], img: 'https://images.unsplash.com/photo-1596464716127-f2a82984de30?auto=format&fit=crop&q=80&w=1000' },
-            'h3': { title: "Islamabad Hub", type: "Regional Hub", desc: "Connecting with global partners and public sector leadership from the capital.", tags: ["Capital Hub", "Diplomatic"], img: 'https://images.unsplash.com/photo-1622546758296-482202744a67?auto=format&fit=crop&q=80&w=1000' },
-            1: { title: "Annual Strategy Summit", date: "Nov 2025", desc: "A gathering of 200+ CEOs to redefine the Pakistani corporate landscape.", tags: ["Strategy", "Leadership"] },
-            2: { title: "Leadership Coaching", date: "Continuous", desc: "Intensive behavioral transformation for C-suite executives.", tags: ["Coaching", "HR"] },
-            3: { title: "Identity Workshop", date: "Dec 2025", desc: "Crafting resonant brand voices for emerging market leaders.", tags: ["Branding", "Creative"] },
-            4: { title: "Team Bonding Retreat", date: "Quarterly", desc: "Breaking silos and fostering authentic organizational communication.", tags: ["Teamwork", "Culture"] },
-            5: { title: "Customer Experience Expo", date: "Feb 2026", desc: "Showcasing modern CX strategies and digital engagement tools.", tags: ["CX", "Innovation"] },
-            6: { title: "Digital Branding Seminar", date: "Mar 2026", desc: "Navigating brand voice consistency in fragmented digital spaces.", tags: ["Digital", "Marketing"] }
-        };
-
-        function handleNodeClick(event, d) {
-            const detailDiv = document.getElementById('detail-content');
-            const placeholderDiv = document.getElementById('detail-placeholder');
-            const detail = entityDetails[d.id];
-            
-            if (!detail) {
-                placeholderDiv.classList.remove('hidden');
-                detailDiv.classList.add('hidden');
-                return;
-            }
-
-            placeholderDiv.classList.add('hidden');
-            detailDiv.classList.remove('hidden');
-            
-            detailDiv.innerHTML = `
-                <div class="animate-in slide-in-from-bottom-4 duration-500">
-                    ${detail.img ? `<img src="${detail.img}" class="w-full h-48 object-cover rounded-[2rem] mb-8 shadow-2xl border border-white/50">` : ''}
-                    <div class="flex items-center gap-2 mb-6">
-                        <span class="inline-block bg-red-50 text-carnelian text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full border border-red-100">${detail.type || detail.date}</span>
-                    </div>
-                    <h4 class="text-4xl font-black mb-6 tracking-tight text-gray-900 leading-[1.1]">${detail.title}</h4>
-                    <p class="text-gray-500 font-medium leading-relaxed mb-10 text-lg">${detail.desc}</p>
-                    <div class="flex flex-wrap gap-3 mb-10">
-                        ${detail.tags.map(tag => `<span class="bg-white/50 text-gray-500 border border-gray-100 px-4 py-2 rounded-xl text-xs font-bold shadow-sm">#${tag}</span>`).join('')}
-                    </div>
-                    <button class="w-full btn-primary py-5 rounded-[1.5rem] font-black text-xs uppercase tracking-[0.3em] shadow-xl">Engage Concept</button>
+                ${hub.team.length > 1 ? `<div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.12em;color:#bbb;margin-bottom:6px;">Full Team</div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;">${hub.team.map(m => `<span style="font-size:11px;font-weight:700;color:#555;background:white;border:1px solid #e5e7eb;padding:4px 10px;border-radius:999px;">${m}</span>`).join('')}</div>` : ''}
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+                <div style="background:#fef2f1;border-radius:14px;padding:14px;">
+                    <div style="font-size:26px;font-weight:900;color:${hub.color};">${hub.clients}+</div>
+                    <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.12em;color:#aaa;margin-top:4px;">Clients</div>
                 </div>
-            `;
-        }
+                <div style="background:#f9fafb;border-radius:14px;padding:14px;">
+                    <div style="font-size:26px;font-weight:900;color:#111;">${hub.since}</div>
+                    <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.12em;color:#aaa;margin-top:4px;">Est.</div>
+                </div>
+            </div>
+            <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#aaa;margin-bottom:12px;">Recent Events</div>
+            <div style="margin-bottom:20px;">
+                ${hub.events.map(e => `
+                    <div class="hub-event-item">
+                        <div style="width:7px;height:7px;border-radius:50%;background:${hub.color};flex-shrink:0;"></div>
+                        <span style="font-size:13px;font-weight:600;color:#444;">${e}</span>
+                    </div>
+                `).join('')}
+            </div>
+            <button style="width:100%;padding:14px;border-radius:16px;background:var(--c-navy);color:white;border:none;font-weight:900;font-size:11px;text-transform:uppercase;letter-spacing:0.15em;cursor:pointer;transition:background 0.2s;"
+                onmouseover="this.style.background='${hub.color}'" onmouseout="this.style.background='var(--c-navy)'">
+                Connect Hub
+            </button>
+        </div>
+    `;
 
-        // Dragging
-        function dragstarted(event) {
-            if (!event.active) simulation.alphaTarget(0.3).restart();
-            event.subject.fx = event.subject.x;
-            event.subject.fy = event.subject.y;
-        }
-        function dragged(event) {
-            event.subject.fx = event.x;
-            event.subject.fy = event.y;
-        }
-        function dragended(event) {
-            if (!event.active) simulation.alphaTarget(0);
-            event.subject.fx = null;
-            event.subject.fy = null;
-        }
+    panel.classList.add('open');
+    map.flyTo([hub.lat, hub.lng], 8, { duration: 1.4, easeLinearity: 0.2 });
+}
 
-        // Global SVG Click resets zoom
-        svg.on("click", (event) => {
-            if (event.target === svg.node()) {
-                fitGraph();
-                document.getElementById('detail-placeholder').classList.remove('hidden');
-                document.getElementById('detail-content').classList.add('hidden');
-            }
+function closeMapPanel() {
+    document.getElementById('map-panel').classList.remove('open');
+}
+
+function flyToHub(key) { openMapPanel(key); }
+function resetMap() {
+    closeMapPanel();
+    map.flyTo([29.5, 70.5], 5, { duration: 1.4 });
+}
+
+// ============================================================
+// GRAPH — Radial Fixed Layout with D3
+// ============================================================
+const graphData = {
+    hubs: [
+        {
+            id: 'h-multan', label: 'Multan', color: '#e32000',
+            detail: { title: 'Multan HQ', subtitle: 'Headquarters · Est. 1991', desc: 'The founding hub — home to Kamran Z. Rizvi and the core team. Specialises in Learning & Development, Coaching, Psychometric Assessments, and HR Consulting. Carnelian\'s largest team with 30+ professionals.', tags: ['Learning', 'Coaching', 'HR', 'Psychometrics'], s1: { v: '30+', l: 'Team Members' }, s2: { v: '1991', l: 'Established' } }
+        },
+        {
+            id: 'h-karachi', label: 'Karachi', color: '#840305',
+            detail: { title: 'Karachi Hub', subtitle: 'Customer Engagement & Learning', desc: 'Serving Pakistan\'s commercial capital with customer engagement campaigns, corporate learning programs, and large-scale activations. Key clients include Nestlé, Shell, and PTCL.', tags: ['Engagement', 'Learning', 'Activation'], s1: { v: '120+', l: 'Active Clients' }, s2: { v: '2005', l: 'Established' } }
+        },
+        {
+            id: 'h-lahore', label: 'Lahore', color: '#702830',
+            detail: { title: 'Lahore Hub', subtitle: 'Branding & Identity', desc: 'Carnelian\'s creative centre — purpose-driven branding, identity design, and authentic storytelling for brands in Pakistan\'s cultural capital. Led by Asif Khan with clients including Crescent Hadeed and Khaadi.', tags: ['Branding', 'Identity', 'Creative'], s1: { v: '90+', l: 'Active Clients' }, s2: { v: '2005', l: 'Established' } }
+        },
+        {
+            id: 'h-islamabad', label: 'Islamabad', color: '#34314d',
+            detail: { title: 'Islamabad Hub', subtitle: 'Government & Public Sector', desc: 'Bridging public sector organisations and diplomatic circles from Pakistan\'s capital. Delivered the Train the Trainer programme and the Together for Tolerance youth movement — the country\'s largest.', tags: ['Government', 'Policy', 'Training'], s1: { v: '75+', l: 'Active Clients' }, s2: { v: '2007', l: 'Established' } }
+        }
+    ],
+    events: [
+        { id: 'e1', hub: 'h-multan', label: 'Train the\nTrainer', date: 'Mar 2022', detail: { title: 'Train the Trainer', subtitle: 'Mar 2022 · Islamabad', desc: 'An immersive 4-day experience exploring all aspects of training and learning. Facilitated by Kamran Z. Rizvi, Shireen Naqvi, Fakiha Imran, and Waleed Anwar.', tags: ['Learning', 'Development'] } },
+        { id: 'e2', hub: 'h-multan', label: 'EQi 2.0\nAssessments', date: 'Ongoing', detail: { title: 'EQi 2.0 Psychometric Assessments', subtitle: 'Ongoing · All Hubs', desc: 'Internationally certified Emotional Intelligence assessments in partnership with MHS Global. Delivered by Fakiha Imran and Hina Qureshi across organisations nationwide.', tags: ['Psychometrics', 'EQ', 'Development'] } },
+        { id: 'e3', hub: 'h-multan', label: 'Org\nConsulting', date: 'Ongoing', detail: { title: 'Organisational Consulting', subtitle: 'Ongoing · All Hubs', desc: 'Needs assessments, organisational scans, and vision-mission-values mapping for SMEs and large enterprises. Led by Kamran Z. Rizvi, Muhammad Ali, and Hina Qureshi.', tags: ['HR', 'Strategy', 'Consulting'] } },
+        { id: 'e4', hub: 'h-karachi', label: 'Shell\nSuperStar', date: 'Completed', detail: { title: 'Shell SuperStar', subtitle: 'Karachi · Completed', desc: 'Enabling Shell\'s transformation from a pure commodity company to an experience delivery company — a flagship coaching and engagement programme across Shell\'s Pakistan network.', tags: ['Coaching', 'Engagement', 'Shell'] } },
+        { id: 'e5', hub: 'h-karachi', label: 'Nido Mission\nNutrition', date: 'Completed', detail: { title: 'Nido Mission Nutrition', subtitle: 'Karachi · Nestlé Pakistan', desc: 'Engaging kids, moms, and teachers across Pakistan to deliver a message of healthy eating and active lifestyles. A year-long nationwide activation for Nestlé Pakistan.', tags: ['Customer Engagement', 'Nestlé', 'Activation'] } },
+        { id: 'e6', hub: 'h-karachi', label: 'PTCL Project\nTransform', date: 'Completed', detail: { title: 'PTCL Project Transform', subtitle: 'Karachi · PTCL', desc: 'Managing change at Pakistan\'s largest national telecommunications company — a comprehensive learning and culture transformation engagement.', tags: ['Learning', 'Change Management', 'PTCL'] } },
+        { id: 'e7', hub: 'h-lahore', label: 'Crescent\nHadeed', date: 'Completed', detail: { title: 'Crescent Hadeed Branding', subtitle: 'Lahore · Crescent Group', desc: 'Crafting a complete identity and brand for Crescent Group\'s newest venture specialising in steel billets — from name development to full visual language.', tags: ['Branding', 'Identity', 'Crescent'] } },
+        { id: 'e8', hub: 'h-lahore', label: 'Identity\nWorkshops', date: 'Ongoing', detail: { title: 'Brand Identity Workshops', subtitle: 'Ongoing · Lahore', desc: 'Crafting resonant brand voices for emerging market leaders. Purpose-driven workshops that explore a brand\'s core values and communicate them through compelling narratives.', tags: ['Branding', 'Workshops', 'Creative'] } },
+        { id: 'e9', hub: 'h-islamabad', label: 'Together for\nTolerance', date: 'Completed', detail: { title: 'Together for Tolerance', subtitle: 'Islamabad · Nationwide', desc: 'Pakistan\'s largest youth movement — a nationwide initiative to spread tolerance and harmony. Carnelian designed and executed community engagement across major cities.', tags: ['Customer Engagement', 'Youth', 'Social Impact'] } },
+        { id: 'e10', hub: 'h-islamabad', label: 'Public Sector\nLeadership', date: 'Ongoing', detail: { title: 'Public Sector Leadership', subtitle: 'Ongoing · Islamabad', desc: 'Leadership coaching and communication programmes for government agencies, regulatory bodies, and diplomatic organisations operating from Pakistan\'s capital.', tags: ['Coaching', 'Government', 'Leadership'] } },
+        { id: 'e11', hub: 'h-islamabad', label: 'Nesvita Women\nof Strength', date: 'Completed', detail: { title: 'Nesvita Women of Strength', subtitle: 'Islamabad · FrieslandCampina', desc: 'A customer engagement campaign celebrating and empowering women across Pakistan — a storytelling-led activation for the Nesvita brand.', tags: ['Customer Engagement', 'Activation', 'Women'] } }
+    ]
+};
+
+const svgEl = document.getElementById('graph-svg');
+const containerEl = document.getElementById('graph-container');
+const W = containerEl.clientWidth;
+const H = containerEl.clientHeight;
+const cx = W / 2;
+const cy = H / 2;
+
+const svg = d3.select('#graph-svg').attr('viewBox', `0 0 ${W} ${H}`);
+const rootG = svg.append('g');
+
+// Zoom
+const zoom = d3.zoom().scaleExtent([0.25, 3]).on('zoom', e => rootG.attr('transform', e.transform));
+svg.call(zoom);
+
+// Layout constants — 4 hubs at 90° intervals
+const HUB_R = Math.min(W, H) * 0.27;
+const EV_R = Math.min(W, H) * 0.155;
+const SPREAD = Math.PI * 0.38; // 68° fan — safe with 90° between hubs
+
+// Compute positions: top, right, bottom, left
+function hubAngle(i) { return (i * Math.PI / 2) - Math.PI / 2; }
+
+const hubPos = {};
+graphData.hubs.forEach((hub, i) => {
+    const a = hubAngle(i);
+    hubPos[hub.id] = { x: cx + HUB_R * Math.cos(a), y: cy + HUB_R * Math.sin(a), angle: a };
+});
+
+const evPos = {};
+graphData.events.forEach(ev => {
+    const hp = hubPos[ev.hub];
+    const siblings = graphData.events.filter(e => e.hub === ev.hub);
+    const idx = siblings.indexOf(ev);
+    const count = siblings.length;
+    const startA = hp.angle - SPREAD / 2;
+    const evAngle = count > 1 ? startA + idx * (SPREAD / (count - 1)) : hp.angle;
+    evPos[ev.id] = {
+        x: hp.x + EV_R * Math.cos(evAngle),
+        y: hp.y + EV_R * Math.sin(evAngle)
+    };
+});
+
+// Layer groups (order matters for z-index)
+const edgesHubG = rootG.append('g');
+const edgesEvG = rootG.append('g');
+const hubsG = rootG.append('g');
+const eventsG = rootG.append('g');
+const centerNodeG = rootG.append('g');
+
+// Expanded state
+const expanded = new Set();
+
+// ---- CENTER NODE ----
+const cg = centerNodeG.append('g')
+    .attr('transform', `translate(${cx},${cy})`)
+    .style('cursor', 'pointer')
+    .on('click', e => { e.stopPropagation(); showDetail('_center'); });
+
+// Glow pill
+cg.append('rect')
+    .attr('x', -84).attr('y', -30).attr('width', 168).attr('height', 60).attr('rx', 30)
+    .attr('fill', 'rgba(226,23,19,0.06)');
+// Main pill
+cg.append('rect')
+    .attr('x', -72).attr('y', -22).attr('width', 144).attr('height', 44).attr('rx', 22)
+    .attr('fill', 'white')
+    .attr('stroke', 'rgba(226,23,19,0.3)')
+    .attr('stroke-width', 2.5)
+    .style('filter', 'drop-shadow(0 6px 22px rgba(226,23,19,0.13))');
+// Label inside pill
+cg.append('text')
+    .attr('text-anchor', 'middle').attr('dy', '0.35em')
+    .style('font-size', '13px').style('font-weight', '900')
+    .style('fill', 'var(--c-red)').style('letter-spacing', '2.5px')
+    .text('CARNELIAN');
+
+// ---- HUB EDGES (center → hubs) ----
+graphData.hubs.forEach(hub => {
+    const hp = hubPos[hub.id];
+    edgesHubG.append('line')
+        .attr('class', `hub-edge-line edge-${hub.id}`)
+        .attr('x1', cx).attr('y1', cy)
+        .attr('x2', hp.x).attr('y2', hp.y)
+        .attr('stroke', hub.color)
+        .attr('stroke-width', 2)
+        .attr('stroke-opacity', 0.2)
+        .attr('stroke-dasharray', '7 6');
+});
+
+// ---- HUB NODES ----
+graphData.hubs.forEach((hub, i) => {
+    const hp = hubPos[hub.id];
+
+    const hg = hubsG.append('g')
+        .attr('class', `hub-g hub-${hub.id}`)
+        .attr('transform', `translate(${cx},${cy})`) // start at center, animate out
+        .style('cursor', 'pointer')
+        .on('click', e => { e.stopPropagation(); toggleHub(hub.id); showDetail(hub.id); });
+
+    // Glow pill
+    hg.append('rect')
+        .attr('x', -74).attr('y', -28).attr('width', 148).attr('height', 56).attr('rx', 28)
+        .attr('fill', `${hub.color}10`);
+
+    // Main pill
+    hg.append('rect')
+        .attr('class', 'hub-pill')
+        .attr('x', -64).attr('y', -22).attr('width', 128).attr('height', 44).attr('rx', 22)
+        .attr('fill', 'white')
+        .attr('stroke', hub.color)
+        .attr('stroke-width', 3)
+        .style('filter', 'drop-shadow(0 4px 16px rgba(0,0,0,0.1))');
+
+    // City name (left of center to leave room for expand icon)
+    hg.append('text')
+        .attr('text-anchor', 'middle').attr('x', -12).attr('dy', '0.35em')
+        .style('font-size', '11px').style('font-weight', '900')
+        .style('fill', hub.color).style('letter-spacing', '1.5px')
+        .text(hub.label.toUpperCase());
+
+    // Divider between label and icon
+    hg.append('line')
+        .attr('x1', 26).attr('y1', -12).attr('x2', 26).attr('y2', 12)
+        .attr('stroke', `${hub.color}35`).attr('stroke-width', 1.5);
+
+    // Expand indicator (+/−)
+    hg.append('text')
+        .attr('class', 'expand-icon')
+        .attr('text-anchor', 'middle').attr('x', 46).attr('dy', '0.35em')
+        .style('font-size', '18px').style('font-weight', '900').style('fill', hub.color)
+        .text('+');
+
+    // Animate in
+    hg.transition()
+        .delay(400 + i * 180)
+        .duration(700)
+        .ease(d3.easeCubicOut)
+        .attr('transform', `translate(${hp.x},${hp.y})`);
+});
+
+// ---- CENTER FADE IN ----
+cg.attr('opacity', 0).transition().delay(200).duration(600).attr('opacity', 1);
+
+// ---- HUB EDGE ANIMATE ----
+setTimeout(() => {
+    d3.selectAll('.hub-edge-line')
+        .attr('stroke-dashoffset', 800)
+        .transition().duration(1200).ease(d3.easeQuadOut)
+        .attr('stroke-dashoffset', 0);
+}, 300);
+
+// ---- TOGGLE HUB ----
+function toggleHub(hubId) {
+    const hub = graphData.hubs.find(h => h.id === hubId);
+    const isExpanded = expanded.has(hubId);
+
+    if (isExpanded) {
+        expanded.delete(hubId);
+        d3.select(`.hub-${hubId}`).select('.expand-icon').text('+');
+        d3.select(`.hub-${hubId}`).select('.hub-pill')
+            .transition().duration(250).attr('stroke-width', 3);
+        collapseEvents(hubId);
+    } else {
+        expanded.add(hubId);
+        d3.select(`.hub-${hubId}`).select('.expand-icon').text('−');
+        d3.select(`.hub-${hubId}`).select('.hub-pill')
+            .transition().duration(250).attr('stroke-width', 5);
+        expandEvents(hubId);
+    }
+}
+
+function expandEvents(hubId) {
+    const hub = graphData.hubs.find(h => h.id === hubId);
+    const hp = hubPos[hubId];
+    const hubEvents = graphData.events.filter(e => e.hub === hubId);
+
+    hubEvents.forEach((ev, i) => {
+        const ep = evPos[ev.id];
+
+        // Bezier edge from hub to event
+        const midX = (hp.x + ep.x) / 2 + (ep.y - hp.y) * 0.1;
+        const midY = (hp.y + ep.y) / 2 - (ep.x - hp.x) * 0.1;
+
+        edgesEvG.append('path')
+            .attr('class', `ev-edge ev-edge-${ev.id}`)
+            .attr('d', `M${hp.x},${hp.y} Q${midX},${midY} ${ep.x},${ep.y}`)
+            .attr('fill', 'none')
+            .attr('stroke', `${hub.color}50`)
+            .attr('stroke-width', 1.5)
+            .attr('stroke-dasharray', '4 5')
+            .attr('opacity', 0)
+            .transition().delay(i * 60).duration(350)
+            .attr('opacity', 1);
+
+        // Event node group
+        const eg = eventsG.append('g')
+            .attr('class', `ev-g ev-g-${ev.id}`)
+            .attr('transform', `translate(${hp.x},${hp.y})`)
+            .style('cursor', 'pointer')
+            .attr('opacity', 0)
+            .on('click', e => { e.stopPropagation(); showDetail(ev.id); });
+
+        eg.transition().delay(i * 60).duration(400).ease(d3.easeCubicOut)
+            .attr('opacity', 1)
+            .attr('transform', `translate(${ep.x},${ep.y})`);
+
+        eg.append('circle')
+            .attr('r', 0).attr('fill', 'white')
+            .attr('stroke', hub.color).attr('stroke-width', 2)
+            .style('filter', 'drop-shadow(0 2px 8px rgba(0,0,0,0.09))')
+            .transition().delay(i * 60).duration(400)
+            .attr('r', 24);
+
+        // Multi-line label
+        const lines = ev.label.split('\n');
+        lines.forEach((line, li) => {
+            const totalLines = lines.length;
+            const yOffset = totalLines === 1 ? '0.35em' : (li === 0 ? '-0.25em' : '0.9em');
+            eg.append('text')
+                .attr('text-anchor', 'middle').attr('dy', yOffset)
+                .style('font-size', '8px').style('font-weight', '900')
+                .style('fill', 'var(--c-navy)').style('letter-spacing', '0.3px')
+                .text(line);
         });
 
-    </script>
+        // Date
+        eg.append('text')
+            .attr('text-anchor', 'middle').attr('y', 36)
+            .style('font-size', '8px').style('font-weight', '700')
+            .style('fill', '#bbb').text(ev.date);
+
+        // Hover
+        eg.on('mouseover', function() {
+            d3.select(this).select('circle')
+                .transition().duration(150).attr('r', 28).attr('fill', `${hub.color}10`);
+        }).on('mouseout', function() {
+            d3.select(this).select('circle')
+                .transition().duration(150).attr('r', 24).attr('fill', 'white');
+        });
+    });
+}
+
+function collapseEvents(hubId) {
+    const hubEvents = graphData.events.filter(e => e.hub === hubId);
+    hubEvents.forEach(ev => {
+        d3.select(`.ev-edge-${ev.id}`).transition().duration(200).attr('opacity', 0).remove();
+        d3.select(`.ev-g-${ev.id}`).transition().duration(250).attr('opacity', 0).remove();
+    });
+}
+
+// ---- DETAIL PANEL ----
+const entityDetails = {
+    _center: {
+        title: 'Carnelian', subtitle: 'Convey Meaning. Create Significance.',
+        desc: 'Since 1991, Carnelian\'s team has been active across the length and breadth of Pakistan — adding value to organisations small and large, local and global, private and public, commercial and non-profit. Started as KZR Associates (1991), evolved into Navitus (2004), and became Carnelian (2014).',
+        tags: ['Learning', 'Coaching', 'Branding', 'Research', 'HR Consulting', 'Events'],
+        s1: { v: '30+', l: 'Team Members' }, s2: { v: '500+', l: 'Clients Served' },
+        color: '#e32000'
+    }
+};
+
+graphData.hubs.forEach(h => {
+    entityDetails[h.id] = { ...h.detail, color: h.color };
+});
+graphData.events.forEach(ev => {
+    const hub = graphData.hubs.find(h => h.id === ev.hub);
+    entityDetails[ev.id] = { ...ev.detail, color: hub.color, s1: null, s2: null };
+});
+
+function showDetail(id) {
+    const d = entityDetails[id];
+    if (!d) return;
+
+    const placeholder = document.getElementById('detail-placeholder');
+    const content = document.getElementById('detail-content');
+    placeholder.style.display = 'none';
+    content.style.display = 'block';
+
+    const statsHtml = d.s1 ? `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+            <div class="detail-stat">
+                <div style="font-size:24px;font-weight:900;color:${d.color};">${d.s1.v}</div>
+                <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.12em;color:#aaa;margin-top:4px;">${d.s1.l}</div>
+            </div>
+            <div class="detail-stat">
+                <div style="font-size:24px;font-weight:900;color:#111;">${d.s2.v}</div>
+                <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.12em;color:#aaa;margin-top:4px;">${d.s2.l}</div>
+            </div>
+        </div>` : '';
+
+    content.innerHTML = `
+        <div class="detail-header" style="background:${d.color};">
+            <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.25em;opacity:0.6;margin-bottom:6px;">${d.subtitle}</div>
+            <h3 style="font-size:24px;font-weight:900;letter-spacing:-0.5px;margin:0;line-height:1.15;">${d.title}</h3>
+        </div>
+        <div class="detail-body">
+            <p style="color:#777;font-weight:500;line-height:1.75;font-size:14px;margin:0 0 20px;">${d.desc}</p>
+            ${statsHtml}
+            <div style="margin-bottom:20px;">${d.tags.map(t => `<span class="detail-tag">#${t}</span>`).join('')}</div>
+            <button class="btn-primary" style="width:100%;padding:14px;border-radius:16px;font-weight:900;font-size:11px;text-transform:uppercase;letter-spacing:0.18em;border:none;"
+                onmouseover="this.style.background='${d.color === '#e32000' ? '#840305' : d.color}'"
+                onmouseout="this.style.background='${d.color}'">
+                Learn More
+            </button>
+        </div>
+    `;
+
+    // Subtle entrance
+    content.style.opacity = '0';
+    content.style.transform = 'translateY(8px)';
+    requestAnimationFrame(() => {
+        content.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        content.style.opacity = '1';
+        content.style.transform = 'translateY(0)';
+    });
+}
+
+// Click SVG background → reset detail
+svg.on('click', () => {
+    const placeholder = document.getElementById('detail-placeholder');
+    const content = document.getElementById('detail-content');
+    placeholder.style.display = 'block';
+    content.style.display = 'none';
+    fitGraph();
+});
+
+// Hub hover effect
+hubsG.selectAll('.hub-g')
+    .on('mouseover', function() {
+        d3.select(this).select('.hub-pill')
+            .transition().duration(150).attr('stroke-width', 5);
+    })
+    .on('mouseout', function() {
+        const hubClass = [...this.classList].find(c => c.startsWith('hub-h-'));
+        const id = hubClass ? hubClass.replace('hub-', '') : '';
+        const strokeW = expanded.has(id) ? 5 : 3;
+        d3.select(this).select('.hub-pill')
+            .transition().duration(150).attr('stroke-width', strokeW);
+    });
+
+// ---- ZOOM CONTROLS ----
+function fitGraph() {
+    svg.transition().duration(700).call(zoom.transform, d3.zoomIdentity);
+}
+document.getElementById('ctrl-zoom-in').onclick = () => svg.transition().duration(250).call(zoom.scaleBy, 1.4);
+document.getElementById('ctrl-zoom-out').onclick = () => svg.transition().duration(250).call(zoom.scaleBy, 0.7);
+document.getElementById('ctrl-fit').onclick = fitGraph;
+</script>
 </body>
 </html>
